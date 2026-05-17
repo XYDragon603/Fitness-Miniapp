@@ -1,0 +1,165 @@
+<view class="container stats-page">
+  <view class="page-header stats-header">
+    <view class="page-title">数据统计</view>
+    <view class="page-desc">用更清晰、更平静的方式回看这一段时间的训练节奏与营养轨迹。</view>
+  </view>
+
+  <view class="stats-hero card">
+    <view class="hero-top">
+      <view class="hero-copy">
+        <view class="hero-kicker">AIR HEALTH WEEKLY</view>
+        <view class="hero-title">本周训练概览</view>
+        <view class="hero-subtitle">用更轻的方式看见自己的训练节奏，把进度和连续性放在一张卡片里。</view>
+      </view>
+
+      <view class="hero-highlight">
+        <view class="hero-highlight-value">{{stats.completionRate}}%</view>
+        <view class="hero-highlight-label">完成率</view>
+      </view>
+    </view>
+
+    <view class="hero-metrics">
+      <view class="hero-metric">
+        <view class="hero-metric-value">{{stats.totalDays}}</view>
+        <view class="hero-metric-label">训练天数</view>
+      </view>
+      <view class="hero-metric">
+        <view class="hero-metric-value streak-value">{{stats.streak}}</view>
+        <view class="hero-metric-label">连续记录</view>
+      </view>
+      <view class="hero-metric">
+        <view class="hero-metric-value rate-value">{{stats.completedExercises}}</view>
+        <view class="hero-metric-label">已完成动作</view>
+      </view>
+      <view class="hero-metric">
+        <view class="hero-metric-value rest-value">{{stats.restDays}}</view>
+        <view class="hero-metric-label">休息天数</view>
+      </view>
+    </view>
+
+    <view class="hero-footnote">计划记录 {{stats.planRecordedDays}} 天 = 训练 {{stats.totalDays}} 次 + 休息 {{stats.restDays}} 天</view>
+  </view>
+
+  <view class="distribution-card card">
+    <view class="card-header stats-card-header">
+      <view>
+        <view class="card-title">训练分布</view>
+        <view class="card-subtitle">看看你的训练重心更多落在哪些日程上。</view>
+      </view>
+    </view>
+
+    <view class="dist-list" wx:if="{{distributionItems.length > 0}}">
+      <view class="dist-item" wx:for="{{distributionItems}}" wx:key="key">
+        <view class="dist-header">
+          <view class="dist-label">
+            <view class="dist-dot" style="background: {{item.color}};"></view>
+            <view class="dist-name">{{item.name}}</view>
+          </view>
+          <view class="dist-count">{{item.count}} 次</view>
+        </view>
+        <view class="dist-track">
+          <view
+            class="dist-fill"
+            style="width: {{item.percent}}%; background: {{item.color}};"
+          ></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state stats-empty-state" wx:else>
+      <view class="empty-text">完成一次训练后，这里会逐步展示不同训练日的分布。</view>
+    </view>
+  </view>
+
+  <view class="completion-card card">
+    <view class="card-header stats-card-header">
+      <view>
+        <view class="card-title">动作完成情况</view>
+        <view class="card-subtitle">把完成率、已完成和未完成拆开看，更容易找到下一步进度。</view>
+      </view>
+    </view>
+
+    <view class="completion-stats">
+      <view class="completion-circle">
+        <view class="circle-outer" style="--completion-percent: {{stats.completionRate}}%;">
+          <view class="circle-inner">
+            <view class="circle-value">{{stats.completionRate}}%</view>
+            <view class="circle-label">完成率</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="completion-detail">
+        <view class="completion-row">
+          <view class="completion-key">总动作数</view>
+          <view class="completion-val">{{stats.totalExercises}}</view>
+        </view>
+        <view class="completion-row">
+          <view class="completion-key">已完成</view>
+          <view class="completion-val done-val">{{stats.completedExercises}}</view>
+        </view>
+        <view class="completion-row">
+          <view class="completion-key">未完成</view>
+          <view class="completion-val undone-val">{{stats.uncompletedExercises}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="recent-card card">
+    <view class="card-header stats-card-header">
+      <view>
+        <view class="card-title">最近 7 天</view>
+        <view class="card-subtitle">用最简洁的方式看到最近一周的训练节奏。</view>
+      </view>
+    </view>
+
+    <view class="week-grid">
+      <view
+        class="week-day {{item.hasRecord ? 'has-record' : ''}}"
+        wx:for="{{recentDays}}"
+        wx:key="date"
+      >
+        <view class="week-day-label">{{item.weekDay}}</view>
+        <view class="week-day-dot {{item.recordType === 'rest' ? 'rest' : ''}} {{item.hasRecord ? 'active' : ''}}">
+          <view wx:if="{{item.recordType === 'training'}}" class="week-day-check">✓</view>
+          <view wx:if="{{item.recordType === 'rest'}}" class="week-day-rest">休</view>
+        </view>
+        <view class="week-day-date">{{item.day}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="nutrition-stats-card card">
+    <view class="card-header stats-card-header">
+      <view>
+        <view class="card-title">近 7 天营养摄入</view>
+        <view class="card-subtitle">用轻量图形记下本周热量摄入的变化趋势。</view>
+      </view>
+    </view>
+
+    <view wx:if="{{nutritionStats.length > 0}}">
+      <view
+        class="nutrition-day-row"
+        wx:for="{{nutritionStats}}"
+        wx:key="date"
+      >
+        <view class="nd-date">{{item.dateCN}}</view>
+        <view class="nd-bars">
+          <view class="nd-bar-group">
+            <view class="nd-track">
+              <view class="nd-bar cal-bar" style="width: {{item.calPercent}}%;"></view>
+            </view>
+            <view class="nd-bar-label">{{item.total.calories}} kcal</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state stats-empty-state" wx:else>
+      <view class="empty-text">暂无营养数据</view>
+    </view>
+  </view>
+
+  <view class="page-spacer"></view>
+</view>

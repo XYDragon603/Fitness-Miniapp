@@ -1,0 +1,291 @@
+<view class="container history-page">
+  <view class="page-header history-header">
+    <view class="page-title">历史记录</view>
+    <view class="page-desc">查看你的训练与饮食轨迹，把每一天的健康记录收纳成更清晰的日记。</view>
+  </view>
+
+  <view class="tab-bar history-tab-bar">
+    <view
+      class="tab-item history-tab-item {{activeTab === 'training' ? 'active' : ''}}"
+      bindtap="switchTab"
+      data-tab="training"
+    >
+      训练记录
+    </view>
+    <view
+      class="tab-item history-tab-item {{activeTab === 'nutrition' ? 'active' : ''}}"
+      bindtap="switchTab"
+      data-tab="nutrition"
+    >
+      饮食记录
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'training'}}">
+    <view class="calendar-card card fade-in">
+      <view class="calendar-shell">
+        <view class="calendar-intro">
+          <view class="calendar-kicker">TRAINING JOURNAL</view>
+          <view class="calendar-heading">训练日历</view>
+          <view class="calendar-note">用更安静的方式回看本月训练轨迹，点击有记录的日期可查看详情。</view>
+        </view>
+
+        <view class="calendar-header">
+          <view class="calendar-switch" bindtap="switchMonth" data-offset="-1">上月</view>
+          <view class="calendar-title">{{calendarYear}} 年 {{calendarMonth}} 月</view>
+          <view class="calendar-switch" bindtap="switchMonth" data-offset="1">下月</view>
+        </view>
+
+        <view class="calendar-weekdays">
+          <view class="calendar-weekday">日</view>
+          <view class="calendar-weekday">一</view>
+          <view class="calendar-weekday">二</view>
+          <view class="calendar-weekday">三</view>
+          <view class="calendar-weekday">四</view>
+          <view class="calendar-weekday">五</view>
+          <view class="calendar-weekday">六</view>
+        </view>
+
+        <view class="calendar-weeks">
+          <view class="calendar-row" wx:for="{{calendarWeeks}}" wx:key="index">
+            <view
+              class="calendar-day {{dayItem ? '' : 'empty'}} {{dayItem && dayItem.hasRecord ? 'has-record' : ''}} {{dayItem && dayItem.dayType ? dayItem.dayType : ''}} {{dayItem && dayItem.recordType === 'rest' ? 'rest' : ''}}"
+              wx:for="{{item}}"
+              wx:for-item="dayItem"
+              wx:for-index="dayIndex"
+              wx:key="dayIndex"
+              bindtap="selectCalendarDay"
+              data-date="{{dayItem ? dayItem.date : ''}}"
+              style="{{dayItem && dayItem.hasRecord && dayItem.color ? 'background:' + dayItem.color + '2E; color:' + dayItem.color + '; border-color:' + dayItem.color + '78;' : ''}}"
+            >
+              <view wx:if="{{dayItem}}" class="calendar-day-inner">
+                <view class="calendar-day-number">{{dayItem.day}}</view>
+                <view wx:if="{{dayItem.hasRecord}}" class="calendar-record-dot" style="background: {{dayItem.color || '#C96565'}};"></view>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view class="calendar-legend">
+          <view class="legend-item" wx:for="{{calendarLegend}}" wx:key="key">
+            <view class="legend-chip" style="border-color: {{item.color}}30; background: {{item.color}}12;">
+              <view class="legend-accent" style="background: {{item.color}};"></view>
+              <view class="legend-text">{{item.label || '训练记录'}}</view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="history-section-label">训练日记</view>
+
+    <view wx:if="{{trainingRecords.length > 0}}">
+      <view
+        class="history-card training-history-card {{item.type === 'rest' ? 'rest-history-card' : ''}} card fade-in"
+        wx:for="{{trainingRecords}}"
+        wx:key="date"
+        style="animation-delay: {{index * 0.05}}s"
+        bindtap="viewTrainingDetail"
+        data-date="{{item.date}}"
+      >
+        <view class="history-entry-top">
+          <view class="history-date-section">
+            <view class="history-date">{{item.dateCN}}</view>
+            <view class="history-count">{{item.planName || (item.type === 'rest' ? '休息记录' : '训练记录')}}</view>
+          </view>
+          <view class="history-badge {{item.type === 'rest' ? 'rest' : ''}}" style="background: {{item.color}}22; color: {{item.color}}; border-color: {{item.color}}38;">
+            {{item.type === 'rest' ? '休息' : item.dayName}}
+          </view>
+        </view>
+
+        <view class="history-entry-copy" wx:if="{{item.type === 'rest'}}">
+          <view class="history-entry-title">{{item.dayName}}</view>
+          <view class="history-entry-note">{{item.feeling || '已记录恢复节奏'}}<text wx:if="{{item.note}}"> · {{item.note}}</text></view>
+        </view>
+
+        <view class="history-entry-copy" wx:else>
+          <view class="history-entry-title">训练进度纪要</view>
+          <view class="history-entry-note">已完成 {{item.completedCount}} / {{item.totalCount}} 个动作，可点击查看当日详情。</view>
+        </view>
+
+        <view class="history-stats" wx:if="{{item.type !== 'rest'}}">
+          <view class="stat-item">
+            <view class="stat-value" style="color: {{item.color}};">{{item.completionRate}}%</view>
+            <view class="stat-label">完成率</view>
+          </view>
+          <view class="stat-item">
+            <view class="stat-value">{{item.completedCount}}/{{item.totalCount}}</view>
+            <view class="stat-label">已完成</view>
+          </view>
+          <view class="stat-item">
+            <view class="stat-value">{{item.totalSets}}</view>
+            <view class="stat-label">总组数</view>
+          </view>
+        </view>
+
+        <view class="rest-stat-row" wx:if="{{item.type === 'rest'}}">
+          <view class="rest-stat-pill">{{item.restCompleted ? '已完成休息打卡' : '已记录恢复日'}}</view>
+          <view class="rest-stat-pill muted">{{item.feeling || '未填写感受'}}</view>
+        </view>
+
+        <view class="entry-progress-track" wx:if="{{item.type !== 'rest'}}">
+          <view
+            class="entry-progress-fill"
+            style="width: {{item.completionRate}}%; background: {{item.color}};"
+          ></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state history-empty card" wx:else>
+      <view class="empty-icon">📅</view>
+      <view class="empty-text">暂无训练记录</view>
+      <view class="empty-hint">开始一次训练后，这里会保留你的训练轨迹。</view>
+    </view>
+  </view>
+
+  <view wx:if="{{activeTab === 'nutrition'}}">
+    <view class="history-section-label">饮食日记</view>
+
+    <view wx:if="{{nutritionRecords.length > 0}}">
+      <view
+        class="history-card nutrition-history-card card fade-in"
+        wx:for="{{nutritionRecords}}"
+        wx:key="date"
+        style="animation-delay: {{index * 0.05}}s"
+      >
+        <view class="history-entry-top">
+          <view class="history-date-section">
+            <view class="history-date">{{item.dateCN}}</view>
+            <view class="history-count">{{item.count}} 条记录</view>
+          </view>
+        </view>
+
+        <view class="nutrition-summary">
+          <view class="nutrition-item">
+            <view class="nutrition-value cal-value">{{item.total.calories}}</view>
+            <view class="nutrition-unit">kcal</view>
+            <view class="nutrition-label">热量</view>
+          </view>
+          <view class="nutrition-item">
+            <view class="nutrition-value protein-value">{{item.total.protein}}g</view>
+            <view class="nutrition-label">蛋白质</view>
+          </view>
+          <view class="nutrition-item">
+            <view class="nutrition-value fat-value">{{item.total.fat}}g</view>
+            <view class="nutrition-label">脂肪</view>
+          </view>
+          <view class="nutrition-item">
+            <view class="nutrition-value carb-value">{{item.total.carbs}}g</view>
+            <view class="nutrition-label">碳水</view>
+          </view>
+        </view>
+
+        <view class="food-detail-list" wx:if="{{item.showDetail}}">
+          <view class="divider"></view>
+          <view
+            class="food-detail-item"
+            wx:for="{{item.foods}}"
+            wx:for-item="food"
+            wx:key="id"
+          >
+            <image class="food-thumb" src="{{food.imagePath}}" mode="aspectFill" wx:if="{{food.imagePath}}"></image>
+            <view class="food-thumb-placeholder" wx:else>饮食</view>
+            <view class="food-info">
+              <view class="food-name">{{food.name}}</view>
+              <view class="food-cal">{{food.calories}} kcal</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="detail-toggle" bindtap="toggleNutritionDetail" data-index="{{index}}">
+          <view>{{item.showDetail ? '收起详情' : '查看详情'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state history-empty card" wx:else>
+      <view class="empty-icon">🍔</view>
+      <view class="empty-text">暂无饮食记录</view>
+      <view class="empty-hint">去营养页记录一顿饮食后，这里会自动结成每日日记。</view>
+    </view>
+  </view>
+
+  <view class="detail-modal" wx:if="{{showDetail}}" bindtap="closeDetail">
+    <view class="detail-content" catchtap="">
+      <view class="detail-header">
+        <view class="detail-title-wrap">
+          <view class="detail-caption">{{detailRecord.type === 'rest' ? '恢复详情' : '训练详情'}}</view>
+          <view class="detail-title">{{detailRecord.dayName}}</view>
+        </view>
+        <view class="detail-close" bindtap="closeDetail">关闭</view>
+      </view>
+
+      <view class="detail-meta" wx:if="{{detailRecord.type === 'rest'}}">
+        <view>{{detailRecord.dateCN}} · {{detailRecord.planName || '休息记录'}}</view>
+      </view>
+
+      <view class="detail-meta" wx:else>
+        <view>{{detailRecord.dateCN}} · 完成率 {{detailRecord.completionRate}}%</view>
+      </view>
+
+      <scroll-view scroll-y class="detail-scroll" wx:if="{{detailRecord.type !== 'rest'}}">
+        <view
+          class="detail-exercise"
+          wx:for="{{detailRecord.exercises}}"
+          wx:key="id"
+        >
+          <view class="detail-ex-header">
+            <view class="detail-ex-name {{item.completed ? 'completed-text' : ''}}">
+              {{item.completed ? '已完成 ' : ''}}{{item.name}}
+            </view>
+          </view>
+
+          <view class="detail-sets">
+            <view class="detail-set-header">
+              <view class="detail-set-col">组</view>
+              <view class="detail-set-col">重量</view>
+              <view class="detail-set-col">次数</view>
+              <view class="detail-set-col">状态</view>
+            </view>
+            <view
+              class="detail-set-row"
+              wx:for="{{item.sets}}"
+              wx:for-item="set"
+              wx:for-index="si"
+              wx:key="index"
+            >
+              <view class="detail-set-col">{{si + 1}}</view>
+              <view class="detail-set-col">{{set.weight || '-'}} kg</view>
+              <view class="detail-set-col">{{set.reps || '-'}} 次</view>
+              <view class="detail-set-col {{set.done ? 'done-text' : 'undone-text'}}">
+                {{set.done ? '已完成' : '未完成'}}
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view class="rest-detail-card" wx:if="{{detailRecord.type === 'rest'}}">
+        <view class="rest-detail-row">
+          <text class="rest-detail-label">状态</text>
+          <text class="rest-detail-value">{{detailRecord.restCompleted ? '已完成休息打卡' : '已记录恢复日'}}</text>
+        </view>
+        <view class="rest-detail-row">
+          <text class="rest-detail-label">今日感受</text>
+          <text class="rest-detail-value">{{detailRecord.feeling || '未填写'}}</text>
+        </view>
+        <view class="rest-detail-row">
+          <text class="rest-detail-label">备注</text>
+          <text class="rest-detail-value">{{detailRecord.note || '未填写'}}</text>
+        </view>
+      </view>
+
+      <view class="detail-actions">
+        <view class="btn-secondary detail-delete-btn" bindtap="deleteRecord" data-date="{{detailRecord.date}}">
+          删除记录
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,9 @@
+<!--
+  空状态组件
+  用于列表无数据时的占位展示
+-->
+<view class="empty-wrapper">
+  <text class="empty-icon">{{icon}}</text>
+  <text class="empty-title">{{title}}</text>
+  <text class="empty-desc" wx:if="{{desc}}">{{desc}}</text>
+</view>

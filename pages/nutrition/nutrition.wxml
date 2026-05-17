@@ -1,0 +1,466 @@
+﻿<view class="container nutrition-page">
+  <view class="page-header air-header nutrition-header">
+    <view class="page-title">每日摄入</view>
+    <view class="page-desc">{{todayCN}} · 用更平静、更可信的方式记录今天的饮食与营养参考目标</view>
+  </view>
+
+  <view class="intake-overview card">
+    <view class="intake-overview-top">
+      <view class="overview-copy">
+        <view class="overview-kicker">AIR HEALTH 营养日志</view>
+        <view class="overview-heading">今日营养总览</view>
+        <view class="overview-note">每一次 AI 识别都会先进入确认界面，你可以调整份量、修正数值，确认后再保存。</view>
+      </view>
+      <view class="overview-energy">
+        <view class="overview-energy-value">{{dailyTotal.calories}}</view>
+        <view class="overview-energy-unit">kcal</view>
+      </view>
+    </view>
+
+    <view class="overview-pills">
+      <view class="overview-pill">
+        <view class="overview-pill-label">今日条目</view>
+        <view class="overview-pill-value">{{todayFoods.length}} 条</view>
+      </view>
+      <view class="overview-pill">
+        <view class="overview-pill-label">记录方式</view>
+        <view class="overview-pill-value">拍照 / 相册 / 手动</view>
+      </view>
+      <view class="overview-pill">
+        <view class="overview-pill-label">保存规则</view>
+        <view class="overview-pill-value">AI 结果需先确认</view>
+      </view>
+    </view>
+
+    <view class="macro-overview-grid">
+      <view class="macro-overview-card calories-card">
+        <view class="macro-overview-label">今日热量</view>
+        <view class="macro-overview-value">{{goalSummary.caloriesText}}</view>
+      </view>
+      <view class="macro-overview-card protein-card">
+        <view class="macro-overview-label">蛋白质</view>
+        <view class="macro-overview-value">{{goalSummary.proteinText}}</view>
+      </view>
+      <view class="macro-overview-card fat-card">
+        <view class="macro-overview-label">脂肪</view>
+        <view class="macro-overview-value">{{goalSummary.fatText}}</view>
+      </view>
+      <view class="macro-overview-card carbs-card">
+        <view class="macro-overview-label">碳水</view>
+        <view class="macro-overview-value">{{goalSummary.carbsText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="goal-card card">
+    <view class="goal-card-top">
+      <view class="goal-card-copy">
+        <view class="card-title">营养参考目标</view>
+        <view class="card-subtitle">{{goalSummary.noteText}}</view>
+      </view>
+      <view class="btn-secondary goal-card-action" bindtap="openGoalForm">
+        <text wx:if="{{goalSummary.hasGoal}}">重新设置</text>
+        <text wx:else>设置目标</text>
+      </view>
+    </view>
+    <view class="goal-card-hint">
+      <view class="goal-card-hint-dot"></view>
+      <view class="goal-card-hint-text">点击右侧按钮，在弹窗内填写身高、体重、年龄、活动水平和目标。</view>
+    </view>
+  </view>
+
+  <view class="body-type-card card">
+    <view class="body-type-top">
+      <view>
+        <view class="card-title">体型参考</view>
+        <view class="card-subtitle">{{goalSummary.bodyTypeNote}}</view>
+      </view>
+    </view>
+    <view class="body-type-grid">
+      <view class="body-type-item">
+        <view class="body-type-label">BMI</view>
+        <view class="body-type-value">{{goalSummary.bmiText}}</view>
+      </view>
+      <view class="body-type-item">
+        <view class="body-type-label">参考状态</view>
+        <view class="body-type-value">{{goalSummary.bodyTypeText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="entry-panel card">
+    <view class="card-header entry-panel-header">
+      <view class="entry-panel-copy">
+        <view class="card-title">添加今日摄入</view>
+        <view class="card-subtitle">保留拍照、相册与手动填写三条入口，优先用更安全的确认流程记录一顿饭。</view>
+      </view>
+      <view class="btn-secondary goal-card-action entry-panel-action" bindtap="openEntrySheet">开始记录</view>
+    </view>
+    <view class="entry-panel-hint">
+      <view class="goal-card-hint-dot"></view>
+      <view class="goal-card-hint-text">点击右侧按钮，在弹窗内选择拍照识别、从相册导入或手动填写。</view>
+    </view>
+  </view>
+
+  <view class="scan-result card" wx:if="{{scanResult}}">
+    <view class="result-header">
+      <view class="result-header-copy">
+        <view class="result-badges">
+          <view class="tag tag-warning result-badge">AI 识别</view>
+          <view class="tag tag-info result-badge estimate-badge">估算值</view>
+        </view>
+        <view class="result-title">识别结果</view>
+        <view class="result-subtitle">请先确认菜名、份量和营养数值，确认后再添加到今日记录。</view>
+      </view>
+      <view class="result-close" bindtap="clearScanResult">清除</view>
+    </view>
+
+    <view class="result-preview">
+      <view class="result-image-wrap" wx:if="{{scanImagePath}}">
+        <image class="result-image" src="{{scanImagePath}}" mode="aspectFill"></image>
+      </view>
+      <view class="result-summary">
+        <view class="result-food-name">{{scanResult.foods.length}} 项识别结果</view>
+        <view class="result-summary-note">{{scanResult.note}}</view>
+      </view>
+    </view>
+
+    <view class="estimate-note low-confidence-note" wx:if="{{scanResult.lowConfidence}}">
+      <view class="estimate-note-label">低置信提醒</view>
+      <view class="estimate-note-text">识别结果可能不完整，请根据实际菜品手动调整主要食材和份量。</view>
+    </view>
+
+    <view class="scan-food-list">
+      <view class="scan-food-card" wx:for="{{scanResult.foods}}" wx:key="id">
+        <view class="scan-food-top">
+          <view>
+            <view class="scan-food-name">{{item.name}}</view>
+            <view class="scan-food-meta">估算重量 {{item.estimatedWeight}}g · 置信度 {{item.confidencePercent}}%</view>
+          </view>
+          <view class="scan-food-edit" bindtap="editScanFood" data-index="{{index}}">修正</view>
+        </view>
+
+        <view class="portion-section">
+          <view class="portion-label">份量确认</view>
+          <view class="portion-options">
+            <view
+              class="portion-chip {{item.portionKey === portion.key ? 'active' : ''}}"
+              wx:for="{{portionOptions}}"
+              wx:key="key"
+              wx:for-item="portion"
+              bindtap="changePortion"
+              data-index="{{index}}"
+              data-portion-key="{{portion.key}}"
+            >
+              {{portion.label}}
+            </view>
+          </view>
+          <input
+            wx:if="{{item.portionKey === 'custom'}}"
+            class="input-field custom-grams-input"
+            type="digit"
+            placeholder="输入克数"
+            placeholder-class="nutrition-input-placeholder"
+            value="{{item.customGrams}}"
+            bindinput="onCustomGramsInput"
+            data-index="{{index}}"
+          />
+        </view>
+
+        <view class="result-nutrition-grid compact">
+          <view class="result-nutrition-card">
+            <view class="rn-label">热量</view>
+            <view class="rn-value cal-value">{{item.calories}}</view>
+            <view class="rn-unit">kcal</view>
+          </view>
+          <view class="result-nutrition-card">
+            <view class="rn-label">蛋白质</view>
+            <view class="rn-value protein-value">{{item.protein}}</view>
+            <view class="rn-unit">g</view>
+          </view>
+          <view class="result-nutrition-card">
+            <view class="rn-label">脂肪</view>
+            <view class="rn-value fat-value">{{item.fat}}</view>
+            <view class="rn-unit">g</view>
+          </view>
+          <view class="result-nutrition-card">
+            <view class="rn-label">碳水</view>
+            <view class="rn-value carb-value">{{item.carbs}}</view>
+            <view class="rn-unit">g</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="result-total">
+      <view class="result-total-title">本餐估算总计</view>
+      <view class="result-total-text">{{scanResult.total.calories}} kcal · P {{scanResult.total.protein}}g · F {{scanResult.total.fat}}g · C {{scanResult.total.carbs}}g</view>
+    </view>
+
+    <view class="estimate-note">
+      <view class="estimate-note-label">估算值</view>
+      <view class="estimate-note-text">上述数值为图片识别后的记录参考，不作为精确营养承诺。</view>
+    </view>
+
+    <view class="rescan-tip" wx:if="{{showDetailedRescanHint}}">
+      <view class="rescan-tip-copy">
+        <view class="rescan-tip-title">结果有点笼统？</view>
+        <view class="rescan-tip-text">这类餐食通常可以继续拆成主食、主菜、蔬菜或酱汁，再确认会更方便。</view>
+      </view>
+      <view class="btn-secondary rescan-tip-action" bindtap="retryDetailedRecognize">重新细分</view>
+    </view>
+
+    <view class="result-actions">
+      <view class="btn-secondary result-action-secondary" bindtap="editScanResult">先修正再保存</view>
+      <view class="btn-primary result-action-primary" bindtap="addToDaily">确认添加到今日</view>
+    </view>
+  </view>
+
+  <view class="modal-mask guide-mask" wx:if="{{showManualForm}}">
+    <view class="guide-modal goal-modal form-sheet-modal" catchtap="noop">
+      <view class="guide-modal-header">
+        <view class="guide-title-wrap">
+          <text class="guide-caption">MANUAL ENTRY</text>
+          <text class="guide-title" wx:if="{{isEditingScanResult}}">修正识别结果</text>
+          <text class="guide-title" wx:else>手动补录</text>
+        </view>
+        <view class="guide-close" bindtap="closeManualForm">关闭</view>
+      </view>
+
+      <scroll-view scroll-y class="sheet-scroll">
+        <view class="form-subtitle" wx:if="{{isEditingScanResult}}">修正后会先回到 AI 结果卡，确认无误后再保存。</view>
+        <view class="form-subtitle" wx:else>手动新增一条记录，可直接加入今日饮食日记。</view>
+
+        <view class="form-shell">
+          <view class="form-group form-group-full">
+            <view class="form-label">食物名称</view>
+            <input class="input-field" placeholder="例如：番茄炒蛋" placeholder-class="nutrition-input-placeholder" value="{{manualForm.name}}" bindinput="onManualInput" data-field="name" />
+          </view>
+
+          <view class="manual-grid">
+            <view class="form-group">
+              <view class="form-label">重量 (g)</view>
+              <input class="input-field" type="digit" placeholder="例如：150" placeholder-class="nutrition-input-placeholder" value="{{manualForm.estimatedWeight}}" bindinput="onManualInput" data-field="estimatedWeight" />
+            </view>
+            <view class="form-group">
+              <view class="form-label">热量 (kcal)</view>
+              <input class="input-field" type="digit" placeholder="例如：320" placeholder-class="nutrition-input-placeholder" value="{{manualForm.calories}}" bindinput="onManualInput" data-field="calories" />
+            </view>
+            <view class="form-group">
+              <view class="form-label">蛋白质 (g)</view>
+              <input class="input-field" type="digit" placeholder="例如：24" placeholder-class="nutrition-input-placeholder" value="{{manualForm.protein}}" bindinput="onManualInput" data-field="protein" />
+            </view>
+            <view class="form-group">
+              <view class="form-label">脂肪 (g)</view>
+              <input class="input-field" type="digit" placeholder="例如：12" placeholder-class="nutrition-input-placeholder" value="{{manualForm.fat}}" bindinput="onManualInput" data-field="fat" />
+            </view>
+            <view class="form-group form-group-full">
+              <view class="form-label">碳水 (g)</view>
+              <input class="input-field" type="digit" placeholder="例如：36" placeholder-class="nutrition-input-placeholder" value="{{manualForm.carbs}}" bindinput="onManualInput" data-field="carbs" />
+            </view>
+          </view>
+        </view>
+
+        <view class="manual-tip">
+          <view class="manual-tip-label">记录建议</view>
+          <view class="manual-tip-text">如果食物是火锅、麻辣烫、自助餐或拼盘类混合食物，建议先记录主要食材和份量。</view>
+        </view>
+      </scroll-view>
+
+      <view class="sheet-footer-actions">
+        <view class="btn-secondary manual-cancel" bindtap="closeManualForm">取消</view>
+        <view class="btn-success manual-submit" bindtap="submitManualForm">
+          <text wx:if="{{isEditingScanResult}}">确认修正</text>
+          <text wx:else>确认添加</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="today-foods">
+    <view class="food-log-header">
+      <view>
+        <view class="section-title">今日饮食日记</view>
+        <view class="section-subtitle">每一条记录都会被纳入今日摄入总览，可随时删除重新记录。</view>
+      </view>
+    </view>
+
+    <view wx:if="{{todayFoods.length > 0}}">
+      <view class="food-card card" wx:for="{{todayFoods}}" wx:key="id">
+        <view class="food-card-main">
+          <image class="food-card-image" src="{{item.imagePath}}" mode="aspectFill" wx:if="{{item.imagePath}}"></image>
+          <view class="food-card-placeholder" wx:else>饮食</view>
+
+          <view class="food-card-info">
+            <view class="food-card-head">
+              <view class="food-card-name">{{item.name}}</view>
+              <view class="food-card-state" wx:if="{{item.estimateTag}}">{{item.estimateTag}}</view>
+              <view class="food-card-state" wx:else>已记录</view>
+            </view>
+            <view class="food-card-note" wx:if="{{item.estimatedWeight}}">估算重量 {{item.estimatedWeight}}g</view>
+            <view class="food-card-note" wx:else>已纳入今日营养总览</view>
+
+            <view class="food-card-macros">
+              <view class="macro-tag cal-tag">热量 {{item.calories}} kcal</view>
+              <view class="macro-tag protein-tag">蛋白质 {{item.protein}} g</view>
+              <view class="macro-tag fat-tag">脂肪 {{item.fat}} g</view>
+              <view class="macro-tag carb-tag">碳水 {{item.carbs}} g</view>
+            </view>
+          </view>
+
+          <view class="food-card-delete" bindtap="deleteFood" data-index="{{index}}">删除</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="food-log-empty card" wx:else>
+      <view class="food-log-empty-title">今天还没有饮食记录</view>
+      <view class="food-log-empty-text">从拍照、相册或手动录入开始，建立第一条今日摄入记录。</view>
+    </view>
+  </view>
+
+  <view class="modal-mask guide-mask" wx:if="{{showGoalForm}}">
+    <view class="guide-modal goal-modal form-sheet-modal" catchtap="noop">
+      <view class="guide-modal-header">
+        <view class="guide-title-wrap">
+          <text class="guide-caption">DAILY TARGET</text>
+          <text class="guide-title">设置营养参考目标</text>
+        </view>
+        <view class="guide-close" bindtap="closeGoalForm">关闭</view>
+      </view>
+      <scroll-view scroll-y class="sheet-scroll">
+        <view class="goal-form-grid">
+          <view class="form-group">
+            <view class="form-label">身高 (cm)</view>
+            <input class="input-field" type="digit" value="{{goalForm.height}}" bindinput="onGoalInput" data-field="height" placeholder="例如：170" placeholder-class="nutrition-input-placeholder" />
+          </view>
+          <view class="form-group">
+            <view class="form-label">体重 (kg)</view>
+            <input class="input-field" type="digit" value="{{goalForm.weight}}" bindinput="onGoalInput" data-field="weight" placeholder="例如：60" placeholder-class="nutrition-input-placeholder" />
+          </view>
+          <view class="form-group">
+            <view class="form-label">年龄</view>
+            <input class="input-field" type="digit" value="{{goalForm.age}}" bindinput="onGoalInput" data-field="age" placeholder="例如：25" placeholder-class="nutrition-input-placeholder" />
+          </view>
+        </view>
+
+        <view class="goal-selector">
+          <view class="form-label">性别</view>
+          <view class="selector-chip-row">
+            <view class="selector-chip {{goalForm.gender === 'male' ? 'active' : ''}}" bindtap="selectGoalGender" data-value="male">男</view>
+            <view class="selector-chip {{goalForm.gender === 'female' ? 'active' : ''}}" bindtap="selectGoalGender" data-value="female">女</view>
+          </view>
+        </view>
+
+        <view class="goal-selector">
+          <view class="form-label">活动水平</view>
+          <view class="selector-chip-row wrap">
+            <view class="selector-chip {{goalForm.activityLevel === item.key ? 'active' : ''}}" wx:for="{{activityOptions}}" wx:key="key" bindtap="selectGoalActivity" data-value="{{item.key}}">{{item.label}}</view>
+          </view>
+        </view>
+
+        <view class="goal-selector">
+          <view class="form-label">目标</view>
+          <view class="selector-chip-row wrap">
+            <view class="selector-chip {{goalForm.goal === item.key ? 'active' : ''}}" wx:for="{{goalOptions}}" wx:key="key" bindtap="selectGoalType" data-value="{{item.key}}">{{item.label}}</view>
+          </view>
+        </view>
+
+        <view class="form-group" wx:if="{{goalForm.goal === 'custom'}}">
+          <view class="form-label">每日参考热量 (kcal)</view>
+          <input class="input-field" type="digit" value="{{goalForm.dailyCalories}}" bindinput="onGoalInput" data-field="dailyCalories" placeholder="例如：2400" placeholder-class="nutrition-input-placeholder" />
+        </view>
+
+        <view class="manual-tip">
+          <view class="manual-tip-label">计算说明</view>
+          <view class="manual-tip-text">系统会基于 BMR 与活动系数给出每日参考热量和三大营养参考目标，不作为强制限制。</view>
+        </view>
+      </scroll-view>
+
+      <view class="sheet-footer-actions">
+        <view class="btn-secondary manual-cancel" bindtap="closeGoalForm">取消</view>
+        <view class="btn-success manual-submit" bindtap="submitGoalForm">保存参考目标</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="modal-mask guide-mask" wx:if="{{showEntrySheet}}">
+    <view class="guide-modal goal-modal form-sheet-modal" catchtap="noop">
+      <view class="guide-modal-header">
+        <view class="guide-title-wrap">
+          <text class="guide-caption">DAILY INTAKE</text>
+          <text class="guide-title">添加今日摄入</text>
+        </view>
+        <view class="guide-close" bindtap="closeEntrySheet">关闭</view>
+      </view>
+
+      <scroll-view scroll-y class="sheet-scroll">
+        <view class="scan-mode-card">
+          <view class="scan-mode-title">识别模式</view>
+          <view class="scan-mode-subtitle">默认使用整道菜优先，控制识别成本；需要更细拆分时，再切到精细拆分优先。</view>
+          <view class="scan-mode-list">
+            <view
+              class="scan-mode-option {{scanMode === item.key ? 'active' : ''}}"
+              wx:for="{{scanModeOptions}}"
+              wx:key="key"
+              bindtap="selectScanMode"
+              data-value="{{item.key}}"
+            >
+              <view class="scan-mode-option-title">{{item.label}}</view>
+              <view class="scan-mode-option-desc">{{item.desc}}</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="entry-actions sheet-entry-actions">
+          <view class="entry-action" bindtap="takePhoto">
+            <view class="entry-action-icon soft-rose">
+              <view class="icon-camera">
+                <view class="icon-camera-lens"></view>
+              </view>
+              <view class="entry-action-icon-label">拍照</view>
+            </view>
+            <view class="entry-action-copy">
+              <view class="entry-action-title">拍照识别</view>
+              <view class="entry-action-desc">先压缩图片，再调用云函数识别常见菜品和中餐混合食物。</view>
+            </view>
+          </view>
+
+          <view class="entry-action" bindtap="chooseFromAlbum">
+            <view class="entry-action-icon soft-blue">
+              <view class="icon-album">
+                <view class="icon-album-card icon-album-back"></view>
+                <view class="icon-album-card icon-album-front"></view>
+              </view>
+              <view class="entry-action-icon-label">相册</view>
+            </view>
+            <view class="entry-action-copy">
+              <view class="entry-action-title">从相册导入</view>
+              <view class="entry-action-desc">适合补录已经拍好的餐食照片，同样先确认再保存。</view>
+            </view>
+          </view>
+
+          <view class="entry-action" bindtap="manualAdd">
+            <view class="entry-action-icon soft-mint">
+              <view class="icon-pencil">
+                <view class="icon-pencil-body"></view>
+                <view class="icon-pencil-tip"></view>
+              </view>
+              <view class="entry-action-icon-label">手动</view>
+            </view>
+            <view class="entry-action-copy">
+              <view class="entry-action-title">手动填写</view>
+              <view class="entry-action-desc">适合称量后直接记录，也可在识别无法满意时直接补入。</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view class="sheet-footer-actions">
+        <view class="btn-secondary manual-cancel" bindtap="closeEntrySheet">稍后再记</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="page-spacer"></view>
+</view>

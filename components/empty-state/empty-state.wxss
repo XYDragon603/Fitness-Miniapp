@@ -1,0 +1,27 @@
+/**
+ * 空状态组件样式
+ */
+.empty-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 40rpx;
+}
+
+.empty-icon {
+  font-size: 120rpx;
+  margin-bottom: 24rpx;
+}
+
+.empty-title {
+  font-size: 30rpx;
+  color: #999999;
+  font-weight: 500;
+}
+
+.empty-desc {
+  font-size: 24rpx;
+  color: #BBBBBB;
+  margin-top: 8rpx;
+}

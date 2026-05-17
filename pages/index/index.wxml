@@ -1,0 +1,343 @@
+<view class="container">
+  <view class="overview-card card fade-in">
+    <view class="overview-top">
+      <view class="overview-copy">
+        <text class="overview-caption">TRAINING PLAN</text>
+        <text class="overview-title">{{planTitle}}</text>
+        <text class="overview-desc">当前启用的训练计划会在这里展开，可以随时切换内置或自定义方案。</text>
+      </view>
+      <view class="plan-badge">{{activePlanId === 'builtin_air_split_foundation' ? '内置参考计划' : '当前启用计划'}}</view>
+    </view>
+
+    <view class="overview-metrics">
+      <view class="overview-metric">
+        <text class="overview-value">{{dayCount}}</text>
+        <text class="overview-label">计划日</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-metric">
+        <text class="overview-value">{{exerciseTotal}}</text>
+        <text class="overview-label">动作总数</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-metric">
+        <text class="overview-value">{{trainingPlans.length}}</text>
+        <text class="overview-label">可用计划</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="plan-manager-card card fade-in">
+    <view class="plan-manager-top">
+      <view class="plan-manager-copy">
+        <text class="plan-manager-kicker">PLAN MANAGER</text>
+        <text class="plan-manager-title">训练计划管理</text>
+        <text class="plan-manager-desc">保留当前内置计划作为参考模板，也可以自己创建并启用自定义计划。</text>
+      </view>
+      <view class="btn-secondary plan-manager-btn" bindtap="openPlanManager">管理计划</view>
+    </view>
+
+    <view class="plan-summary-row">
+      <view class="plan-summary-pill">
+        <text class="plan-summary-label">当前启用</text>
+        <text class="plan-summary-value">{{planTitle}}</text>
+      </view>
+      <view class="plan-summary-pill">
+        <text class="plan-summary-label">自定义数量</text>
+        <text class="plan-summary-value">{{trainingPlans.length > 0 ? trainingPlans.length - 1 : 0}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="day-list">
+    <view
+      class="day-card card fade-in {{item.isRestDay ? 'rest-day-card' : ''}}"
+      wx:for="{{trainingDays}}"
+      wx:key="id"
+      style="animation-delay: {{index * 0.06}}s;"
+    >
+      <view class="day-hero {{item.isRestDay ? 'rest-day-hero' : ''}}" style="background: linear-gradient(135deg, {{item.color}}14, #FFFFFF 58%);">
+        <view class="day-hero-main">
+          <view class="day-chip-row">
+            <text class="day-order" style="background: {{item.color}}22; color: {{item.color}};">Day {{index + 1}}</text>
+            <text class="day-chip">{{item.isRestDay ? '恢复安排' : '当前计划'}}</text>
+          </view>
+
+          <view class="day-title-row">
+            <text class="day-icon">{{item.icon}}</text>
+            <view class="day-copy">
+              <text class="day-name">{{item.name}}</text>
+              <text class="day-summary" wx:if="{{item.isRestDay}}">{{item.restFocus || '恢复 · 拉伸 · 放松'}}</text>
+              <text class="day-summary" wx:else>{{item.exercises.length}} 个动作，可从这里直接开始记录。</text>
+            </view>
+          </view>
+
+          <view class="rest-day-copy" wx:if="{{item.isRestDay}}">
+            <text class="rest-day-desc">{{item.restDescription || '恢复也是训练计划的一部分。'}}</text>
+            <text class="rest-day-tip">{{item.restNote || '今天可以散步、拉伸、早睡，帮助身体恢复。'}}</text>
+          </view>
+        </view>
+
+        <view class="day-orb" style="background: radial-gradient(circle at 30% 30%, {{item.color}}56, {{item.color}}12 72%);"></view>
+      </view>
+
+      <view class="exercise-list" wx:if="{{!item.isRestDay}}">
+        <view
+          class="exercise-item"
+          wx:for="{{item.exercises}}"
+          wx:for-item="exercise"
+          wx:for-index="exerciseIndex"
+          wx:key="id"
+        >
+          <view class="exercise-head">
+            <view class="exercise-name-row">
+              <view class="exercise-index" style="background: {{item.color}}14; color: {{item.color}};">{{exerciseIndex + 1}}</view>
+              <text class="exercise-name">{{exercise.name}}</text>
+            </view>
+
+            <view
+              class="exercise-guide-entry"
+              bindtap="openGuide"
+              data-day-index="{{index}}"
+              data-exercise-index="{{exerciseIndex}}"
+            >
+              查看教学
+            </view>
+          </view>
+
+          <view class="exercise-meta">
+            <view class="exercise-pill">
+              <text class="pill-label">目标部位</text>
+              <text class="pill-value" wx:if="{{exercise.targetPart}}">{{exercise.targetPart}}</text>
+              <text class="pill-value" wx:else>未填写</text>
+            </view>
+            <view class="exercise-pill">
+              <text class="pill-label">组数</text>
+              <text class="pill-value">{{exercise.currentPlan.sets}} 组</text>
+            </view>
+            <view class="exercise-pill">
+              <text class="pill-label">次数</text>
+              <text class="pill-value">{{exercise.currentPlan.reps}}</text>
+            </view>
+          </view>
+
+          <view class="exercise-note" wx:if="{{exercise.currentPlan.note}}">
+            <text class="note-label">训练提示</text>
+            <text class="note-text">{{exercise.currentPlan.note}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="start-btn-wrap">
+        <view
+          class="btn-primary start-btn {{item.isRestDay ? 'rest-start-btn' : ''}}"
+          bindtap="startTraining"
+          data-day-index="{{index}}"
+          style="background: linear-gradient(135deg, {{item.color}}, {{item.color}}E8);"
+        >
+          {{item.isRestDay ? '记录休息' : '开始今日训练'}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="notice-card card">
+    <view class="notice-header">
+      <text class="notice-tag">训练提示</text>
+      <text class="notice-title">训练建议</text>
+    </view>
+    <text class="notice-content">{{notice}}</text>
+  </view>
+
+  <view class="modal-mask guide-mask" wx:if="{{guideVisible}}" bindtap="closeGuide">
+    <view class="guide-modal" catchtap="noop">
+      <view class="guide-modal-header">
+        <view class="guide-title-wrap">
+          <text class="guide-caption">动作教学</text>
+          <text class="guide-title">{{activeGuide.exerciseName}}</text>
+        </view>
+        <view class="guide-close" bindtap="closeGuide">关闭</view>
+      </view>
+
+      <view class="guide-section">
+        <text class="guide-section-title">动作说明</text>
+        <text class="guide-summary">{{activeGuide.summary}}</text>
+      </view>
+
+      <view class="guide-section" wx:if="{{activeGuide.targetMuscles.length}}">
+        <text class="guide-section-title">目标肌群</text>
+        <view class="guide-list">
+          <view wx:for="{{activeGuide.targetMuscles}}" wx:key="*this" class="guide-list-item">
+            <text class="guide-bullet">•</text>
+            <text class="guide-list-text">{{item}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="guide-section" wx:if="{{activeGuide.commonMistakes.length}}">
+        <text class="guide-section-title">常见错误</text>
+        <view class="guide-list">
+          <view wx:for="{{activeGuide.commonMistakes}}" wx:key="*this" class="guide-list-item">
+            <text class="guide-bullet">•</text>
+            <text class="guide-list-text">{{item}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="guide-section" wx:if="{{activeGuide.tips.length}}">
+        <text class="guide-section-title">注意事项</text>
+        <view class="guide-list">
+          <view wx:for="{{activeGuide.tips}}" wx:key="*this" class="guide-list-item">
+            <text class="guide-bullet">•</text>
+            <text class="guide-list-text">{{item}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="guide-video-card">
+        <text class="guide-section-title">教学链接</text>
+        <text class="guide-video-title">{{activeGuide.videoTitle}}</text>
+        <text class="guide-video-url" wx:if="{{activeGuide.videoUrl}}" selectable="true">{{activeGuide.videoUrl}}</text>
+        <view class="guide-video-action" wx:if="{{activeGuide.videoUrl}}" bindtap="copyGuideVideoUrl">复制教学链接</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="modal-mask guide-mask" wx:if="{{planManagerVisible}}" bindtap="closePlanManager">
+    <view class="guide-modal plan-modal" catchtap="noop">
+      <view class="guide-modal-header">
+        <view class="guide-title-wrap">
+          <text class="guide-caption">MVP PLAN</text>
+          <text class="guide-title">训练计划管理</text>
+        </view>
+        <view class="guide-close" bindtap="closePlanManager">关闭</view>
+      </view>
+
+      <view class="plan-list">
+        <view class="plan-list-item" wx:for="{{trainingPlans}}" wx:key="id">
+          <view class="plan-list-copy">
+            <text class="plan-list-title">{{item.title}}</text>
+            <text class="plan-list-meta" wx:if="{{item.type === 'builtin'}}">内置参考计划 · {{item.dayCount}} 个计划日 · {{item.exerciseTotal}} 个动作</text>
+            <text class="plan-list-meta" wx:else>自定义计划 · {{item.dayCount}} 个计划日 · {{item.exerciseTotal}} 个动作</text>
+          </view>
+          <view
+            class="{{activePlanId === item.id ? 'btn-success plan-list-action active' : 'btn-secondary plan-list-action'}}"
+            bindtap="activatePlan"
+            data-plan-id="{{item.id}}"
+          >
+            <text wx:if="{{activePlanId === item.id}}">已启用</text>
+            <text wx:else>启用</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="plan-modal-footer">
+        <view class="btn-primary" bindtap="openCreatePlan">创建自定义计划</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="modal-mask guide-mask" wx:if="{{createPlanVisible}}">
+    <view class="guide-modal plan-modal create-plan-modal" catchtap="noop">
+      <view class="guide-modal-header">
+        <view class="guide-title-wrap">
+          <text class="guide-caption">CUSTOM PLAN</text>
+          <text class="guide-title">新建自定义计划</text>
+        </view>
+        <view class="guide-close" bindtap="closeCreatePlan">取消</view>
+      </view>
+
+      <scroll-view scroll-y class="create-plan-scroll">
+        <view class="plan-form-group">
+          <text class="plan-form-label">计划名称</text>
+          <input class="input-field plan-input-lg" value="{{planDraft.title}}" bindinput="onDraftPlanInput" data-field="title" placeholder="例如：我的增肌计划" />
+        </view>
+
+        <view class="plan-form-group">
+          <text class="plan-form-label">计划说明</text>
+          <textarea class="plan-textarea plan-textarea-lg" value="{{planDraft.notice}}" bindinput="onDraftPlanInput" data-field="notice" placeholder="可以记下计划节奏、恢复提醒或单次训练要点"></textarea>
+        </view>
+
+        <view class="draft-day-card {{item.type === 'rest' ? 'draft-day-card-rest' : ''}}" wx:for="{{planDraft.days}}" wx:key="index">
+          <view class="draft-day-top">
+            <text class="draft-day-title">{{item.type === 'rest' ? '休息日' : '训练日'}} {{index + 1}}</text>
+            <view class="draft-day-remove" bindtap="removeDraftDay" data-day-index="{{index}}" wx:if="{{planDraft.days.length > 1}}">删除</view>
+          </view>
+
+          <view class="plan-form-group">
+            <text class="plan-form-label">{{item.type === 'rest' ? '休息日名称' : '训练日名称'}}</text>
+            <input class="input-field plan-input-lg" value="{{item.name}}" bindinput="onDraftDayInput" data-day-index="{{index}}" data-field="name" placeholder="{{item.type === 'rest' ? '例如：主动恢复日' : '例如：腿臀日'}}" />
+          </view>
+
+          <view wx:if="{{item.type === 'rest'}}">
+            <view class="plan-form-group">
+              <text class="plan-form-label">恢复重点</text>
+              <input class="input-field plan-input-lg" value="{{item.focus}}" bindinput="onDraftDayInput" data-day-index="{{index}}" data-field="focus" placeholder="例如：恢复 / 拉伸 / 轻活动" />
+            </view>
+
+            <view class="plan-form-group">
+              <text class="plan-form-label">恢复说明</text>
+              <textarea class="plan-textarea plan-textarea-lg" value="{{item.description}}" bindinput="onDraftDayInput" data-day-index="{{index}}" data-field="description" placeholder="例如：今天可以轻松活动、拉伸或完全休息。"></textarea>
+            </view>
+
+            <view class="plan-form-group">
+              <text class="plan-form-label">备注</text>
+              <textarea class="plan-textarea plan-textarea-lg mini" value="{{item.note}}" bindinput="onDraftDayInput" data-day-index="{{index}}" data-field="note" placeholder="例如：散步 20 分钟、拉伸、早点休息"></textarea>
+            </view>
+          </view>
+
+          <view wx:else>
+            <view class="draft-exercise-card" wx:for="{{item.exercises}}" wx:for-item="exercise" wx:for-index="exerciseIndex" wx:key="index">
+              <view class="draft-exercise-top">
+                <text class="draft-exercise-title">动作 {{exerciseIndex + 1}}</text>
+                <view class="draft-day-remove" bindtap="removeDraftExercise" data-day-index="{{index}}" data-exercise-index="{{exerciseIndex}}" wx:if="{{item.exercises.length > 1}}">删除</view>
+              </view>
+
+              <view class="plan-form-group">
+                <text class="plan-form-label">动作名称</text>
+                <input class="input-field plan-input-lg" value="{{exercise.name}}" bindinput="onDraftExerciseInput" data-day-index="{{index}}" data-exercise-index="{{exerciseIndex}}" data-field="name" placeholder="例如：杠铃卧推" />
+              </view>
+
+              <view class="plan-form-grid">
+                <view class="plan-form-group half">
+                  <text class="plan-form-label">目标部位</text>
+                  <input class="input-field plan-input-lg" value="{{exercise.targetPart}}" bindinput="onDraftExerciseInput" data-day-index="{{index}}" data-exercise-index="{{exerciseIndex}}" data-field="targetPart" placeholder="例如：背部" />
+                </view>
+                <view class="plan-form-group half">
+                  <text class="plan-form-label">组数</text>
+                  <input class="input-field plan-input-lg" type="number" value="{{exercise.sets}}" bindinput="onDraftExerciseInput" data-day-index="{{index}}" data-exercise-index="{{exerciseIndex}}" data-field="sets" placeholder="例如：3" />
+                </view>
+                <view class="plan-form-group half">
+                  <text class="plan-form-label">次数</text>
+                  <input class="input-field plan-input-lg" value="{{exercise.reps}}" bindinput="onDraftExerciseInput" data-day-index="{{index}}" data-exercise-index="{{exerciseIndex}}" data-field="reps" placeholder="例如：10-12" />
+                </view>
+                <view class="plan-form-group half">
+                  <text class="plan-form-label">教学链接</text>
+                  <input class="input-field plan-input-lg" value="{{exercise.videoUrl}}" bindinput="onDraftExerciseInput" data-day-index="{{index}}" data-exercise-index="{{exerciseIndex}}" data-field="videoUrl" placeholder="请输入 B站 / 抖音 / 小红书链接" />
+                </view>
+              </view>
+
+              <view class="plan-video-hint">教学链接目前支持哔哩哔哩、抖音、小红书，保存后可在动作教学里直接复制。</view>
+
+              <view class="plan-form-group">
+                <text class="plan-form-label">备注</text>
+                <textarea class="plan-textarea plan-textarea-lg mini" value="{{exercise.note}}" bindinput="onDraftExerciseInput" data-day-index="{{index}}" data-exercise-index="{{exerciseIndex}}" data-field="note" placeholder="记下该动作的次序、节奏或注意事项"></textarea>
+              </view>
+            </view>
+
+            <view class="draft-add-action" bindtap="addDraftExercise" data-day-index="{{index}}">添加动作</view>
+          </view>
+        </view>
+
+        <view class="draft-action-row">
+          <view class="draft-add-action" bindtap="addDraftTrainingDay">添加训练日</view>
+          <view class="draft-add-action secondary" bindtap="addDraftRestDay">添加休息日</view>
+        </view>
+      </scroll-view>
+
+      <view class="plan-modal-footer">
+        <view class="btn-success" bindtap="submitCustomPlan">保存并启用</view>
+      </view>
+    </view>
+  </view>
+</view>

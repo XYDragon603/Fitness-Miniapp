@@ -9,6 +9,7 @@ function buildOverview(plan, records, today, selectedDayId) {
   const belongs = record => (!record.planId || record.planId === (plan && plan.id)) && days.some(day => day.id === (record.dayId || record.dayType));
   const latest = list.find(record => record.date <= today && belongs(record));
   let selectedIndex = days.findIndex(day => day.id === selectedDayId);
+  if (selectedIndex < 0 && latest && latest.date === today) selectedIndex = days.findIndex(day => day.id === (latest.dayId || latest.dayType));
   if (selectedIndex < 0 && plan && plan.schedule && plan.schedule.mode === 'weekday') {
     const planned = schedule.resolveDay(plan, records, today);
     selectedIndex = days.findIndex(day => planned && day.id === planned.id);

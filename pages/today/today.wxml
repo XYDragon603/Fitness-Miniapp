@@ -6,6 +6,7 @@
     <view class="hero-sub">{{day && day.isRest ? '恢复也是训练的一部分。' : '持续训练，让更好的自己成为日常。'}}</view>
   </view>
 
+  <view wx:if="{{weeklyReady}}" class="weekly-banner" bindtap="openWeekly"><text>上周周报已生成 · 看看你的进步</text><text>↗</text></view>
   <!-- 今日训练 -->
   <view class="dark-card today-card" wx:if="{{day}}">
     <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />

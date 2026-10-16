@@ -1,0 +1,13 @@
+<nav-bar back title="排课方式" />
+<view class="page has-footer">
+  <view class="hero"><view class="hero-title">让训练融入日常</view><view class="hero-sub">{{title}}</view></view>
+  <view class="schedule-modes">
+    <view class="mode {{mode === 'cycle' ? 'active' : ''}}" bindtap="selectMode" data-mode="cycle"><view class="list-row-title">固定循环</view><view class="list-row-desc">完成一天后，继续计划的下一天</view></view>
+    <view class="mode {{mode === 'weekday' ? 'active' : ''}}" bindtap="selectMode" data-mode="weekday"><view class="list-row-title">按星期安排</view><view class="list-row-desc">例如周一练胸、周三练背，其余休息</view></view>
+  </view>
+  <view class="list-card" wx:if="{{mode === 'weekday'}}">
+    <picker wx:for="{{rows}}" wx:key="weekday" range="{{choices}}" range-key="name" value="{{item.selected}}" bindchange="changeDay" data-day="{{item.weekday}}"><view class="list-row"><text class="list-row-body">{{item.label}}</text><text>{{item.name}}</text><image class="chevron" src="/images/icons/chevron-right-grey.svg" /></view></picker>
+  </view>
+  <view class="hero-sub" style="margin-top: 28rpx;">排课只影响计划安排，历史训练记录会保留。未安排的星期自动作为休息日。</view>
+</view>
+<view class="footer-bar"><view class="lime-btn" bindtap="save">保存排课</view></view>

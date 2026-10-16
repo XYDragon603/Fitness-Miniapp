@@ -1,0 +1,15 @@
+<nav-bar back title="训练提醒" />
+<view class="page has-footer">
+  <view class="hero"><view class="hero-title">给训练留个时间</view><view class="hero-sub">{{planTitle}}</view></view>
+  <view class="reminder-status"><view class="list-row-title">微信推送尚未配置</view><view class="hero-sub">订阅消息模板尚未提供。可以先保存时间与提醒偏好，当前不会发送消息。</view></view>
+  <view class="list-card">
+    <view class="list-row"><view class="list-row-body"><view class="list-row-title">希望收到训练提醒</view><view class="list-row-desc">配置模板并授权后生效</view></view><switch checked="{{settings.enabled}}" color="#92B54C" bindchange="changeEnabled" /></view>
+    <picker mode="time" value="{{settings.time}}" bindchange="changeTime"><view class="list-row"><view class="list-row-body">提醒时间</view><text class="num">{{settings.time}}</text><image class="chevron" src="/images/icons/chevron-right-grey.svg" /></view></picker>
+    <view class="list-row" bindtap="openSchedule"><view class="list-row-body">调整训练日安排</view><image class="chevron" src="/images/icons/chevron-right-grey.svg" /></view>
+  </view>
+  <view class="section-head"><text class="section-title">未来训练日预览</text></view>
+  <view class="hero-sub" wx:if="{{!preview.length}}">未来两周暂无训练安排。</view>
+  <view class="list-card"><view class="list-row" wx:for="{{preview}}" wx:key="date"><text class="list-row-body num">{{item.date}} {{settings.time}}</text><text>{{item.name}}</text></view></view>
+  <view class="hero-sub" style="margin-top: 28rpx;">按设备当地时间显示。固定循环的预览假设按计划完成每天的安排。微信订阅授权将在模板配置后单独请求。</view>
+</view>
+<view class="footer-bar"><view class="lime-btn" bindtap="save">保存提醒偏好</view></view>

@@ -1,0 +1,10 @@
+<nav-bar back title="动作进步" />
+<view class="page progress-page">
+  <view class="hero"><view class="hero-title">{{name}}</view><view class="hero-sub">每一次的重量，都有迹可循。</view></view>
+  <view class="dark-card personal-best"><view><text class="label-dark">最大重量</text><view class="metric num">{{bestWeight}}<text> kg</text></view></view><view><text class="label-dark">估算 1RM</text><view class="metric num">{{bestE1rm === null ? '—' : bestE1rm}}<text> kg</text></view></view></view>
+  <view class="range-tabs"><view class="{{range === 30 ? 'active' : ''}}" bindtap="selectRange" data-days="30">近 30 天</view><view class="{{range === 90 ? 'active' : ''}}" bindtap="selectRange" data-days="90">近 90 天</view><view class="{{range === 0 ? 'active' : ''}}" bindtap="selectRange" data-days="0">全部</view></view>
+  <view class="chart-block"><view class="section-title">最大重量走势 · kg</view><image wx:if="{{weightChart}}" class="chart" src="{{weightChart}}" mode="widthFix"/><view wx:else class="empty-text">这个时间段还没有已完成的正式训练组。</view></view>
+  <view class="chart-block"><view class="section-title">估算 1RM 走势 · kg</view><image wx:if="{{e1rmChart}}" class="chart" src="{{e1rmChart}}" mode="widthFix"/><view wx:else class="empty-text">完成不超过 12 次的负重组后显示。</view><view class="hint">采用已完成非热身组估算，用于观察趋势。</view></view>
+  <view class="section-head"><text class="section-title">历次记录</text><text class="section-meta">{{points.length}} 次</text></view>
+  <view class="list-row" wx:for="{{points}}" wx:key="date" bindtap="openDay" data-date="{{item.date}}"><view class="list-row-body"><view class="list-row-title">{{item.date}}</view><view class="list-row-desc">{{item.setCount}} 组 · {{item.volume}} kg 训练量</view></view><view class="num">{{item.maxWeight}} kg<view class="hint">1RM {{item.e1rm === null ? '—' : item.e1rm}}</view></view></view>
+</view>

@@ -52,9 +52,15 @@ Page({
     const state = app.refreshTrainingPlanState();
     this._plan = state.activePlan;
     const today = util.getToday();
+    if (typeof wx.getStorageSync === 'function') {
+      const report = require('../../utils/insights-data.js').latestWeek(today);
+      this.setData({ weeklyReady: report.hasData && wx.getStorageSync('weekly_seen') !== report.start });
+    }
     this._records = util.getTrainingDates().map(date => util.getTrainingRecord(date));
     const records = this._records;
-    const sameContext = this._overviewDate === today && this._overviewPlan === this._plan.id;
+    const scheduleKey = JSON.stringify(this._plan.schedule || {});
+    const sameContext = this._overviewDate === today && this._overviewPlan === this._plan.id && this._overviewSchedule === scheduleKey;
+    this._overviewSchedule = scheduleKey;
     const todayRecord = records.find(record => record && record.date === today && (!record.planId || record.planId === this._plan.id));
     const recordDayId = todayRecord && (todayRecord.dayId || todayRecord.dayType) || '';
     const recordChanged = this._recordDayId !== recordDayId;
@@ -160,6 +166,7 @@ Page({
     wx.navigateTo({ url: '/pages/record/record' });
   },
 
+  openWeekly() { wx.navigateTo({ url: '/pages/report/report?kind=week' }); },
   openPlans() { wx.switchTab({ url: '/pages/index/index' }); },
 
   openHistory() { wx.navigateTo({ url: '/pages/history/history' }); }

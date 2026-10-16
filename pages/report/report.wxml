@@ -1,0 +1,15 @@
+<nav-bar back title="{{report.kind === 'week' ? '训练周报' : '训练完成'}}" />
+<view class="page has-footer report-page">
+  <view class="dark-card report-card" wx:if="{{report}}">
+    <view class="brand">健行计划</view><view class="report-title">{{report.kind === 'week' ? '这一周，都算数。' : '又一次，完成。'}}</view>
+    <view class="report-date">{{report.kind === 'week' ? report.start + ' — ' + report.end : report.date}}</view><view class="report-name">{{report.title}}</view>
+    <view class="volume-panel"><view class="label-dark">训练量</view><view class="report-volume num">{{report.volume}}<text> kg</text></view></view>
+    <view class="report-grid"><view><text class="label-dark">{{report.kind === 'week' ? '训练' : '完成动作'}}</text><view class="report-value num">{{report.kind === 'week' ? report.trainingCount + ' 次' : report.exerciseCount + ' 个'}}</view></view><view><text class="label-dark">新纪录</text><view class="report-value num">{{report.prCount}} 项</view></view><view><text class="label-dark">{{report.kind === 'week' ? '平均摄入' : '完成组数'}}</text><view class="report-value num">{{report.kind === 'week' ? (report.avgCalories === null ? '未记录' : report.avgCalories + ' kcal') : report.setCount + ' 组'}}</view></view><view><text class="label-dark">{{report.kind === 'week' ? '体重变化' : '训练时长'}}</text><view class="report-value num">{{report.kind === 'week' ? (report.weightChange === null ? '记录不足' : report.weightChange + ' kg') : (report.durationMin ? report.durationMin + ' 分钟' : '未计时')}}</view></view></view>
+    <view class="report-note" wx:if="{{report.kind === 'week'}}">平均摄入按 {{report.nutritionDays}} 个有记录日计算。</view>
+    <view class="pr-name" wx:for="{{report.prNames}}" wx:key="*this">↑ {{item}}</view><view class="report-foot">每一次，都在积累进步。</view>
+  </view>
+  <view class="report-note error" wx:if="{{error}}">{{error}}</view><view wx:if="{{report.kind === 'week' && !isShared}}" class="soft-btn older" bindtap="previousWeek">查看更早一周</view>
+  <view class="report-note">保存图片后可手动发朋友圈，也可通过右上角菜单分享。</view>
+</view>
+<view class="footer-bar" wx:if="{{report}}"><button class="lime-btn" bindtap="saveImage" loading="{{saving}}" disabled="{{saving}}">保存分享图片</button><button class="soft-btn share-button" open-type="share">分享给朋友</button></view>
+<canvas type="2d" id="shareCanvas" class="share-canvas" />

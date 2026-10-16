@@ -35,6 +35,7 @@ Page({
     if (item) wx.setNavigationBarTitle({ title: item.name });
   },
   onUnload() { this._destroyed = true; },
+  openProgress() { if (this._item) wx.navigateTo({ url: `/pages/exercise-progress/progress?key=${encodeURIComponent(this._item.id)}&name=${encodeURIComponent(this._item.name)}` }); },
   onMediaError() { this.setData({ mediaUrl: '' }); },
   onGifError() { this.setData({ 'view.gif': '' }); },
   onAddTap() {

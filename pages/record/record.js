@@ -5,6 +5,7 @@ const workoutPlan = require('../../utils/workout-plan.js');
 const restTimer = require('../../utils/rest-timer.js');
 const ui = require('../../utils/ui-helpers.js');
 const nextTarget = require('../../utils/next-target.js');
+const setTypes = require('../../utils/set-types.js');
 
 const REST_DURATION_SECONDS = restTimer.DEFAULT_REST_SEC;
 const VISIBLE_WEEK = 1;
@@ -27,7 +28,7 @@ function formatWeight(value) {
 function bestSetOf(exercise, doneOnly) {
   const sets = exercise && Array.isArray(exercise.sets) ? exercise.sets : [];
   return sets.reduce((best, set) => {
-    if (doneOnly && !(set && set.done)) return best;
+    if (!setTypes.countsForRecord(set) || (doneOnly && !(set && set.done))) return best;
     const weight = Number(set && set.weight) || 0;
     const reps = Number(set && set.reps) || 0;
     if (!reps) return best;
@@ -94,6 +95,7 @@ function createEmptySets(setCount) {
     weight: '',
     reps: '',
     done: false,
+    type: 'working',
     weightInputMode: 'picker',
     repsInputMode: 'picker'
   }));
@@ -211,6 +213,7 @@ Page({
     restPresets: restTimer.REST_PRESETS,
     restDefaultSec: REST_DURATION_SECONDS,
     targetView: null,
+    supersetOptions: null,
     ...getDefaultRestTimerData()
   },
 
@@ -453,6 +456,7 @@ Page({
     const previousExerciseMap = {};
     const overloadSuggestionMap = {};
     const dayExercises = Array.isArray(day.exercises) ? day.exercises : [];
+    const pairGroups = (wx.getStorageSync('training_supersets') || {})[`${plan.id}:${day.id}`] || [];
 
     const exercises = dayExercises.map(exercisePlan => {
       const weekPlan = exercisePlan.weeks[effectiveWeek] || exercisePlan.weeks[VISIBLE_WEEK];
@@ -464,7 +468,11 @@ Page({
       const target = savedExercise ? null : nextTarget.getNextTarget(exercisePlan.libraryId || exercisePlan.id);
       const repsMeta = util.parsePlanRepsMeta(weekPlan.reps, weekPlan.sets);
       const previousBest = bestSetOf(previousRecord && previousRecord.exercise);
-      const sets = createEmptySets(weekPlan.sets).map((set, setIndex) => {
+      const pairGroup = pairGroups.find(group => Array.isArray(group) && group.length === 2 && group.includes(exercisePlan.id)
+        && group.every(id => dayExercises.some(item => item.id === id)));
+      const supersetId = savedExercise && savedExercise.supersetId || (pairGroup ? pairGroup.slice().sort().join(':') : '');
+      const sets = (savedExercise && Array.isArray(savedExercise.sets) && savedExercise.sets.length
+        ? savedExercise.sets : createEmptySets(weekPlan.sets)).map((set, setIndex) => {
         const savedSet = savedExercise && Array.isArray(savedExercise.sets) ? savedExercise.sets[setIndex] : null;
         const fallbackReps = repsMeta.suggestedBySet[setIndex] || '';
         const targetWeight = target && target.weights[setIndex] !== undefined ? target.weights[setIndex] : '';
@@ -472,6 +480,8 @@ Page({
         const previousSet = previousRecord && previousRecord.exercise && Array.isArray(previousRecord.exercise.sets)
           ? previousRecord.exercise.sets[setIndex] : null;
         return {
+          type: setTypes.typeOf(savedSet || (supersetId ? { type: 'superset' } : set)),
+          typeLabel: setTypes.LABELS[setTypes.typeOf(savedSet || (supersetId ? { type: 'superset' } : set))],
           weight: normalizeValue(savedSet && savedSet.weight) || normalizeValue(targetWeight),
           reps: normalizeValue(savedSet && savedSet.reps) || normalizeValue(targetReps) || fallbackReps,
           weightHint: previousSet && normalizeValue(previousSet.weight) ? normalizeValue(previousSet.weight) : '',
@@ -488,6 +498,8 @@ Page({
 
       return {
         id: exercisePlan.id,
+        supersetId,
+        supersetLabel: supersetId ? '超级组 · 两个动作交替' : '',
         ...(exercisePlan.libraryId ? { libraryId: exercisePlan.libraryId } : {}),
         name: exercisePlan.name,
         targetPart: exercisePlan.targetPart || '',
@@ -514,6 +526,7 @@ Page({
     });
 
     this.effectiveWeek = effectiveWeek;
+    this._pendingTargets = [];
     this.sessionStartedAt = matchedRecord && matchedRecord.startedAt ? matchedRecord.startedAt : '';
     this.resetRestTimerState();
     this.applyStatusBar(true);
@@ -582,7 +595,8 @@ Page({
   },
 
   commitExercises(exercises) {
-    exercises = exercises.map(exercise => ({ ...exercise, activeSetIndex: exercise.sets.findIndex(set => !set.done) }));
+    exercises = exercises.map(exercise => ({ ...exercise, activeSetIndex: exercise.sets.findIndex(set => !set.done),
+      sets: exercise.sets.map(set => ({ ...set, type: setTypes.typeOf(set), typeLabel: setTypes.LABELS[setTypes.typeOf(set)] })) }));
     this.setData({
       exercises,
       ...this.getProgressData(exercises)
@@ -655,6 +669,11 @@ Page({
     const exercises = this.cloneExercises(this.data.exercises);
     const exercise = exercises[exIndex];
     const targetSet = exercise.sets[setIndex];
+    if (!targetSet) return;
+    if (!targetSet.done && (!(Number(targetSet.reps) > 0) || !Number.isInteger(Number(targetSet.reps))
+      || !Number.isFinite(Number(targetSet.weight || 0)) || Number(targetSet.weight || 0) < 0)) {
+      wx.showToast({ title: '请填写有效重量和次数', icon: 'none' }); return;
+    }
 
     targetSet.done = !targetSet.done;
     if (targetSet.done && !this.sessionStartedAt) this.sessionStartedAt = new Date().toISOString();
@@ -662,10 +681,25 @@ Page({
     this.commitExercises(exercises);
     this.autoSave();
 
+    const partnerIndex = targetSet.done && setTypes.countsForProgression(targetSet)
+      ? setTypes.nextSupersetExercise(exercises, Number(exIndex)) : -1;
+    if (partnerIndex >= 0) {
+      if (exercise.completed) this._pendingTargets = [...new Set((this._pendingTargets || []).concat(Number(exIndex)))];
+      const count = item => item.sets.filter(set => set.done && setTypes.countsForProgression(set)).length;
+      this.setData({ currentExIndex: partnerIndex });
+      if (count(exercise) <= count(exercises[partnerIndex])) {
+        const nextIndex = exercises[partnerIndex].sets.findIndex(set => !set.done);
+        this.startRestTimer(exercises[partnerIndex].name, partnerIndex, nextIndex - 1);
+      }
+      return;
+    }
+
     if (targetSet.done && Number(setIndex) < exercise.sets.length - 1 && !this.data.isRestDay) {
       this.startRestTimer(exercise.name, Number(exIndex), Number(setIndex));
     } else if (targetSet.done && exercise.completed && !this.data.isRestDay) {
-      this.openTargetView(Number(exIndex));
+      const targets = [...new Set((this._pendingTargets || []).concat(Number(exIndex)))];
+      this._pendingTargets = targets.slice(1);
+      this.openTargetView(targets[0]);
     }
   },
 
@@ -717,12 +751,13 @@ Page({
       return;
     }
 
-    const weights = util.copyWeightTemplateFromRecord(previousRecord.exercise, exercise.sets.length);
+    const workingSets = exercise.sets.filter(setTypes.countsForProgression);
+    const weights = util.copyWeightTemplateFromRecord({ ...previousRecord.exercise,
+      sets: (previousRecord.exercise.sets || []).filter(setTypes.countsForProgression) }, workingSets.length);
     const exercises = this.cloneExercises(this.data.exercises);
-    exercises[index].sets = exercises[index].sets.map((set, setIndex) => ({
-      ...set,
-      weight: normalizeValue(weights[setIndex])
-    }));
+    let workingIndex = -1;
+    exercises[index].sets = exercises[index].sets.map(set => setTypes.countsForProgression(set)
+      ? { ...set, weight: normalizeValue(weights[++workingIndex]) } : set);
     this.commitExercises(exercises);
 
     wx.showToast({
@@ -938,6 +973,7 @@ Page({
   serializeExercises(exercises) {
     return (exercises || []).map(exercise => ({
       id: exercise.id,
+      ...(exercise.supersetId ? { supersetId: exercise.supersetId } : {}),
       ...(exercise.libraryId ? { libraryId: exercise.libraryId } : {}),
       name: exercise.name,
       targetPart: exercise.targetPart,
@@ -948,12 +984,13 @@ Page({
       sets: Array.isArray(exercise.sets) ? exercise.sets.map(set => ({
         weight: normalizeValue(set.weight),
         reps: normalizeValue(set.reps),
-        done: !!set.done
+        done: !!set.done,
+        ...(setTypes.typeOf(set) !== 'working' ? { type: setTypes.typeOf(set) } : {})
       })) : []
     }));
   },
 
-  saveRecord(confirmedReplacement) {
+  saveRecord(confirmedReplacement, onSaved) {
     const { exercises, selectedDayIndex, todayStr, isRestDay: isRestDayMode, restForm } = this.data;
     const plan = this.currentPlan || app.getActiveTrainingPlan();
     const effectiveWeek = this.effectiveWeek || VISIBLE_WEEK;
@@ -976,7 +1013,7 @@ Page({
         title: '替换今日记录？',
         content: `今天已保存“${priorToday.dayName || '训练'}”。每天保留一份记录，继续保存会替换它。`,
         confirmText: '替换保存',
-        success: result => { this._saveConfirmation = false; if (result.confirm) this.saveRecord(true); },
+        success: result => { this._saveConfirmation = false; if (result.confirm) this.saveRecord(true, onSaved); },
         fail: () => { this._saveConfirmation = false; }
       });
       return;
@@ -1021,6 +1058,7 @@ Page({
       sessionStatusText: '已保存记录'
     });
     wx.vibrateShort({ type: 'medium' });
+    if (typeof onSaved === 'function') onSaved(record);
   },
 
   adoptSuggestion(e) {
@@ -1029,12 +1067,16 @@ Page({
     const suggestion = exercise && exercise.overloadSuggestion;
     if (!suggestion || !suggestion.show) return;
     const exercises = this.cloneExercises(this.data.exercises);
-    exercises[index].sets = exercises[index].sets.map((set, setIndex) => set.done ? set : ({
+    let workingIndex = -1;
+    exercises[index].sets = exercises[index].sets.map(set => {
+      if (!setTypes.countsForProgression(set)) return set;
+      const setIndex = ++workingIndex;
+      return set.done ? set : ({
       ...set,
       weight: String(suggestion.weights[setIndex] === undefined ? suggestion.weight : suggestion.weights[setIndex]),
       reps: String(suggestion.repsBySet[setIndex] === undefined ? suggestion.reps : suggestion.repsBySet[setIndex]),
       weightInputMode: 'input', repsInputMode: 'input'
-    }));
+    }); });
     this.commitExercises(exercises);
     wx.showToast({ title: '已填入未完成组', icon: 'success' });
   },
@@ -1234,8 +1276,8 @@ Page({
     const exercise = view ? this.data.exercises[view.exIndex] : null;
     if (exercise) {
       nextTarget.saveNextTarget(exercise.libraryId || exercise.id, {
-        weights: exercise.sets.map(set => set.weight),
-        repsBySet: exercise.sets.map(set => set.reps),
+        weights: exercise.sets.filter(setTypes.countsForProgression).map(set => set.weight),
+        repsBySet: exercise.sets.filter(setTypes.countsForProgression).map(set => set.reps),
         source: 'keep'
       });
     }
@@ -1244,6 +1286,7 @@ Page({
 
   closeTargetView() {
     this.setData({ targetView: null });
+    if (this._pendingTargets && this._pendingTargets.length) { this.openTargetView(this._pendingTargets.shift()); return; }
     this.goNextExercise();
   },
 
@@ -1253,11 +1296,65 @@ Page({
 
   finishWorkout() {
     if (this.data.isRestDay) return;
-    this.saveRecord();
-    const saved = util.getTrainingRecord(this.data.todayStr);
-    if (saved && saved.dayId === (this.currentPlan && this.currentPlan.days[this.data.selectedDayIndex] || {}).id) {
-      setTimeout(() => wx.redirectTo({ url: `/pages/history/day?date=${this.data.todayStr}` }), 900);
-    }
+    this.saveRecord(false, () => wx.redirectTo({ url: `/pages/report/report?date=${this.data.todayStr}` }));
+  },
+
+  openProgress() {
+    const exercise = this.data.exercises[this.data.currentExIndex];
+    if (exercise) wx.navigateTo({ url: `/pages/exercise-progress/progress?key=${encodeURIComponent(ui.exerciseKey(exercise))}&name=${encodeURIComponent(exercise.name)}` });
+  },
+
+  setTypeMenu(event) {
+    const { exIndex, setIndex } = event.currentTarget.dataset;
+    const exercise = this.data.exercises[exIndex];
+    if (!exercise || !exercise.sets[setIndex]) return;
+    wx.showActionSheet({ itemList: ['正式组', '热身组（不计纪录）', '递减组', '删除这一组'], success: result => {
+      const exercises = this.cloneExercises(this.data.exercises);
+      if (result.tapIndex === 3) {
+        if (exercises[exIndex].sets.length <= 1) { wx.showToast({ title: '至少保留一组', icon: 'none' }); return; }
+        exercises[exIndex].sets.splice(setIndex, 1);
+      } else exercises[exIndex].sets[setIndex].type = result.tapIndex === 0 && exercise.supersetId ? 'superset' : ['working', 'warmup', 'drop'][result.tapIndex];
+      exercises[exIndex].completed = exercises[exIndex].sets.every(set => set.done);
+      this.commitExercises(exercises); this.autoSave();
+    } });
+  },
+
+  addSet() {
+    wx.showActionSheet({ itemList: ['添加正式组', '添加热身组', '添加递减组'], success: result => {
+      const exercises = this.cloneExercises(this.data.exercises);
+      const exercise = exercises[this.data.currentExIndex]; if (!exercise) return;
+      const type = ['working', 'warmup', 'drop'][result.tapIndex];
+      const previous = exercise.sets[exercise.sets.length - 1] || {};
+      const set = { ...createEmptySets(1)[0], type: type === 'working' && exercise.supersetId ? 'superset' : type,
+        weight: type === 'drop' && Number(previous.weight) > 0 ? formatWeight(Number(previous.weight) * .8) : '', reps: previous.reps || '' };
+      if (type === 'warmup') exercise.sets.unshift(set); else exercise.sets.push(set);
+      exercise.completed = false; this.commitExercises(exercises); this.autoSave();
+    } });
+  },
+
+  chooseSuperset() {
+    const current = this.data.currentExIndex;
+    this.setData({ supersetOptions: this.data.exercises.map((item, index) => ({ index, name: item.name })).filter(item => item.index !== current) });
+  },
+  closeSuperset() { this.setData({ supersetOptions: null }); },
+  pairSuperset(event) {
+    const partner = Number(event.currentTarget.dataset.index);
+    const current = this.data.currentExIndex;
+    const exercises = this.cloneExercises(this.data.exercises);
+    if (!exercises[current] || (partner >= 0 && !exercises[partner]) || current === partner) return;
+    const ids = [exercises[current].id, ...(partner >= 0 ? [exercises[partner].id] : [])];
+    const groups = wx.getStorageSync('training_supersets') || {};
+    const key = `${this.currentPlan.id}:${this.currentPlan.days[this.data.selectedDayIndex].id}`;
+    const pairs = (groups[key] || []).filter(pair => Array.isArray(pair) && pair.length === 2 && pair.every(id => exercises.some(item => item.id === id)) && !pair.some(id => ids.includes(id)));
+    if (partner >= 0) pairs.push(ids);
+    wx.setStorageSync('training_supersets', { ...groups, [key]: pairs });
+    exercises.forEach(exercise => {
+      const pair = pairs.find(item => item.includes(exercise.id));
+      exercise.supersetId = pair ? pair.slice().sort().join(':') : '';
+      exercise.supersetLabel = pair ? '交替：' + exercises.find(item => item.id === pair.find(id => id !== exercise.id)).name : '';
+      exercise.sets = exercise.sets.map(set => ['working', 'superset'].includes(setTypes.typeOf(set)) ? { ...set, type: pair ? 'superset' : 'working' } : set);
+    });
+    this.commitExercises(exercises); this.closeSuperset(); this.autoSave();
   },
 
   onExerciseMediaError(e) {

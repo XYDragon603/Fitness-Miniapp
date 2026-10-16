@@ -664,7 +664,8 @@ Page({
   openMealSheet(e) {
     const group = this.data.mealGroups[Number(e.currentTarget.dataset.index)];
     if (!group) return;
-    this.setData({ mealSheet: group });
+    const favorites = wx.getStorageSync('favorite_foods') || [];
+    this.setData({ mealSheet: { ...group, items: group.items.map(item => ({ ...item, favorite: favorites.some(food => food.name === item.name) })) } });
     this.refreshTabBarVisibility();
   },
 
@@ -1623,10 +1624,34 @@ Page({
     const dates = util.getNutritionDates().slice().sort().reverse().slice(0, 60);
     const recordsByDate = {};
     dates.forEach(date => { recordsByDate[date] = util.getNutritionRecords(date); });
-    this._frequentRaw = foodSuggest.frequentFoods(recordsByDate, 8);
+    this._frequentRaw = require('../../utils/food-shortcuts.js').combine(wx.getStorageSync('favorite_foods') || [], foodSuggest.frequentFoods(recordsByDate, 12), 12);
     return this._frequentRaw.map(item => ({ name: item.name, calories: item.calories, weight: item.estimatedWeight }));
   },
 
+  toggleFavorite(e) {
+    const food = util.getNutritionRecords(this.data.todayStr)[Number(e.currentTarget.dataset.index)];
+    if (!food) return;
+    const favorites = wx.getStorageSync('favorite_foods') || [];
+    const found = favorites.some(item => item.name === food.name);
+    wx.setStorageSync('favorite_foods', found ? favorites.filter(item => item.name !== food.name)
+      : [require('../../utils/food-shortcuts.js').portion(food)].concat(favorites).slice(0, 50));
+    this.setData({ frequentFoods: this.loadFrequentFoods() });
+    this.openMealSheet({ currentTarget: { dataset: { index: this.data.mealGroups.findIndex(group => group.key === this.data.mealSheet.key) } } });
+    wx.showToast({ title: found ? '已移出常吃' : '已加入常吃', icon: 'none' });
+  },
+  copyYesterday() {
+    const today = this.data.todayStr;
+    const yesterday = require('../../utils/schedule.js').addDays(today, -1);
+    const foods = util.getNutritionRecords(yesterday);
+    const groups = require('../../utils/records-view.js').buildMealGroups(foods);
+    if (!groups.length) { wx.showToast({ title: '昨天没有饮食记录', icon: 'none' }); return; }
+    wx.showActionSheet({ itemList: groups.map(group => `${group.label} · ${group.items.length} 项 · ${group.calories} kcal`), success: result => {
+      const group = groups[result.tapIndex]; if (!group) return;
+      const copies = require('../../utils/food-shortcuts.js').copyMeal(foods, group.items.map(item => item.index), today, util.generateId);
+      util.saveNutritionRecords(today, util.getNutritionRecords(today).concat(copies));
+      this.loadTodayRecords(); wx.showToast({ title: `已复制昨天的${group.label}`, icon: 'none' });
+    } });
+  },
   pickFoodSuggestion(e) {
     const suggestion = this.data.foodSuggestions[Number(e.currentTarget.dataset.index)];
     if (!suggestion) return;

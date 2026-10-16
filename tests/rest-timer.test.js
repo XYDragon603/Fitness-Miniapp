@@ -71,7 +71,7 @@ page.selectDay({ currentTarget: { dataset: { index: 0 } } });
 assert.strictEqual(page.data.exercises[0].sets[0].previousSetLabel, '上次 60kg × 10');
 assert.strictEqual(page.data.exercises[0].sets[1].previousSetLabel, '');
 assert(page.data.exercises[0].previousDateLabel.includes('10月12日'));
-const toggle = index => page.toggleSetDone({ currentTarget: { dataset: { exIndex: 0, setIndex: index } } });
+const toggle = index => { page.data.exercises[0].sets[index].reps = '10'; page.toggleSetDone({ currentTarget: { dataset: { exIndex: 0, setIndex: index } } }); };
 toggle(0);
 assert.strictEqual(page.data.restTimerLabel, '02:00');
 assert.strictEqual(tab.hidden, true);

@@ -18,7 +18,7 @@ function completedSets(exercise, progressionOnly) {
       if (!set || set.done !== true) return null;
       const weight = number(set.weight, true);
       const reps = number(set.reps, false);
-      return weight !== null && reps !== null && reps > 0 && Number.isInteger(reps)
+      return weight !== null && reps !== null && reps > 0 && Number.isInteger(reps) && Number.isFinite(weight * reps)
         ? { index, weight, reps } : null;
     }).filter(Boolean);
 }
@@ -138,6 +138,12 @@ function recordsForExercise(records, key, knownExercises) {
   return result;
 }
 
+function resolveExerciseKey(exercise, knownExercises) {
+  if (!exercise) return '';
+  if (exercise.libraryId) return exercise.libraryId;
+  const ids = [...new Set((knownExercises || []).filter(item => item && item.id === exercise.id && item.libraryId).map(item => item.libraryId))];
+  return ids.length === 1 ? ids[0] : exercise.id;
+}
 function findPersonalRecords(records, key, knownExercises) {
   const best = { bestWeight: null, bestE1RM: null, bestVolume: null };
   if (!key) return best;
@@ -175,4 +181,4 @@ function detectNewRecords(todayExercise, previousPRs) {
     .map(type => ({ type, ...current[type] }));
 }
 
-module.exports = { suggestNextTarget, estimateOneRepMax, findPersonalRecords, detectNewRecords, recordsForExercise, completedSets };
+module.exports = { suggestNextTarget, estimateOneRepMax, findPersonalRecords, detectNewRecords, recordsForExercise, completedSets, resolveExerciseKey };

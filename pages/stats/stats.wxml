@@ -42,10 +42,10 @@
 
   <view class="section-head">
     <text class="section-title">个人纪录</text>
-    <text class="section-meta" wx:if="{{personalRecords.length}}">共 {{personalRecords.length}} 项</text>
+    <text class="section-meta" wx:if="{{personalRecords.length}}">{{personalRecords.length}} 项 · 点开查看曲线</text>
   </view>
   <view class="list-card" wx:if="{{topRecords.length}}">
-    <view class="list-row st-pr" wx:for="{{topRecords}}" wx:key="key" bindtap="openRecord" data-library-id="{{item.libraryId}}">
+    <view class="list-row st-pr" wx:for="{{topRecords}}" wx:key="key" bindtap="openRecord" data-key="{{item.key}}">
       <view class="st-pr-icon"><image class="st-pr-img" src="{{item.image}}" mode="aspectFit" /></view>
       <view class="list-row-body">
         <view class="list-row-title">{{item.name}}</view>

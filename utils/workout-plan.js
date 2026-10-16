@@ -394,7 +394,9 @@ function ensureWorkoutPlanState() {
 function getPlanById(planId) {
   const plans = getWorkoutPlans();
   const matched = plans.find(plan => plan.id === planId);
-  return matched ? clone(matched) : null;
+  if (!matched) return null;
+  const saved = (wx.getStorageSync(PLAN_SCHEDULES_KEY) || {})[planId];
+  return clone(schedule.withRestDay({ ...matched, ...(saved ? { schedule: schedule.normalize(saved, matched.days) } : {}) }));
 }
 
 function upsertCustomPlan(plan) {
@@ -448,6 +450,6 @@ module.exports = {
   normalizeExercise,
   saveWorkoutPlans,
   setActivePlanId,
-  upsertCustomPlan
-  , savePlanSchedule, getPlanSchedule, PLAN_SCHEDULES_KEY
+  upsertCustomPlan,
+  savePlanSchedule, getPlanSchedule, PLAN_SCHEDULES_KEY
 };

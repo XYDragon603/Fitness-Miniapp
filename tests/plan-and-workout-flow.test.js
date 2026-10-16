@@ -149,7 +149,7 @@ const workoutPlan = require('../utils/workout-plan.js');
   assert.strictEqual(page.data.restTimerVisible, false);
 
   page.keepCurrentTarget();
-  assert.deepStrictEqual(redirects, [`/pages/history/day?date=${today}`]);
+  assert.deepStrictEqual(redirects, [`/pages/report/report?date=${today}`]);
   const saved = storage[`training_${today}`];
   assert.strictEqual(saved.dayId, 'push');
   assert(saved.exercises[0].sets.every(set => set.done));

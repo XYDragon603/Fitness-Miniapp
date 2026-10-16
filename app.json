@@ -12,7 +12,11 @@
     "pages/history/day",
     "pages/weight/weight",
     "pages/welcome/welcome",
-    "pages/backup/backup"
+    "pages/backup/backup",
+    "pages/exercise-progress/progress",
+    "pages/report/report",
+    "pages/schedule/schedule",
+    "pages/reminders/reminders"
   ],
   "window": {
     "backgroundTextStyle": "dark",

@@ -112,6 +112,10 @@
           </view>
         </view>
 
+        <view class="workout-tools">
+          <text bindtap="openProgress">进步曲线 ↗</text>
+          <text bindtap="chooseSuperset">{{item.supersetLabel || '配对超级组'}}</text>
+        </view>
         <view class="sets-head">
           <text class="col-set">组</text><text class="col-step">重量（kg）</text><text class="col-step">次数</text><text class="col-done">完成</text>
         </view>
@@ -119,7 +123,7 @@
           wx:for="{{item.sets}}" wx:for-item="set" wx:for-index="setIndex" wx:key="setIndex"
           class="set-row {{setIndex === item.activeSetIndex ? 'is-current' : ''}} {{set.done ? 'is-done' : ''}}"
         >
-          <text class="col-set set-no num">{{setIndex + 1}}</text>
+          <view class="col-set set-no num" bindtap="setTypeMenu" data-ex-index="{{index}}" data-set-index="{{setIndex}}"><text>{{setIndex + 1}}</text><text class="set-type">{{set.typeLabel}}⌄</text></view>
           <view class="col-step stepper">
             <view class="step-btn" bindtap="stepValue" data-ex-index="{{index}}" data-set-index="{{setIndex}}" data-field="weight" data-delta="-1"><image class="icon-sm" src="/images/icons/minus-white.svg" /></view>
             <input class="step-input num" type="digit" value="{{set.weight}}" placeholder="{{set.weightHint || '0'}}" placeholder-class="step-placeholder" bindinput="onWeightInput" data-ex-index="{{index}}" data-set-index="{{setIndex}}" />
@@ -135,8 +139,8 @@
             <view wx:else class="done-ring"></view>
           </view>
         </view>
+        <view class="add-set" bindtap="addSet">＋ 添加训练组（正式 / 热身 / 递减）</view>
       </view>
-
       <view class="footer-bar dark">
         <view class="lime-btn" bindtap="completeCurrentSet">
           <text class="lime-btn-text">{{item.completed ? (completedCount === exercises.length ? '完成训练' : '下一个动作') : '完成这一组'}}</text>
@@ -246,6 +250,16 @@
     </view>
   </view>
 
+  <view class="sheet-mask" wx:if="{{supersetOptions}}" bindtap="closeSuperset">
+    <view class="sheet dark" catchtap="noop">
+      <view class="sheet-handle"></view><view class="sheet-title">配对超级组</view>
+      <view class="sheet-sub">两个动作交替完成，一轮之后休息。热身组单独完成。</view>
+      <scroll-view scroll-y style="max-height: 55vh;">
+        <view class="list-row" wx:for="{{supersetOptions}}" wx:key="index" bindtap="pairSuperset" data-index="{{item.index}}">{{item.name}}</view>
+      </scroll-view>
+      <view class="dark-btn" bindtap="pairSuperset" data-index="-1">取消当前配对</view>
+    </view>
+  </view>
   <!-- ========== 动作教学 ========== -->
   <view class="sheet-mask" wx:if="{{guideVisible}}" bindtap="closeGuide">
     <view class="sheet dark" catchtap="noop">

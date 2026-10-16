@@ -27,6 +27,7 @@
     <image class="icon" src="/images/icons/chevron-right-white.svg" />
   </view>
 
+  <view class="section-link" bindtap="openSchedule" style="margin: 24rpx 0;">排课方式 · 固定循环 / 按星期安排 ↗</view>
   <scroll-view scroll-x class="day-tiles" enhanced show-scrollbar="{{false}}">
     <view
       wx:for="{{trainingDays}}" wx:key="id"

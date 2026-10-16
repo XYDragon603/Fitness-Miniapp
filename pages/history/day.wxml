@@ -54,5 +54,6 @@
     <view class="empty-title">这天没有记录</view>
   </view>
 
+  <view class="lime-btn" wx:if="{{record && !isRest}}" bindtap="openShare">生成训练分享卡片</view>
   <view class="day-delete" wx:if="{{record}}" bindtap="deleteRecord">删除这天的记录</view>
 </view>

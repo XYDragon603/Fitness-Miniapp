@@ -85,7 +85,7 @@ function planToDraft(plan) {
   return {
     title: plan.title || '',
     notice: plan.notice || '',
-    days: (plan.days || []).map(day => (day.type === 'rest'
+    days: (plan.days || []).filter(day => day.id !== '__weekday_rest__').map(day => (day.type === 'rest'
       ? { ...createDraftRestDay(), id: day.id, name: day.name, icon: day.icon, color: day.color, focus: day.focus || '', description: day.description || '', note: day.note || '' }
       : { type: 'training', id: day.id, name: day.name, icon: day.icon, color: day.color, exercises: (day.exercises || []).map(exercise => createDraftExercise(exercise)) }))
   };
@@ -127,6 +127,7 @@ function dayCountLabel(plan) {
 }
 
 Page({
+  openSchedule() { wx.navigateTo({ url: '/pages/schedule/schedule' }); },
   data: {
     trainingDays: [],
     notice: '',
@@ -234,11 +235,13 @@ Page({
     }));
 
     // 默认选中“今天该练的那天”，用户手动切换后保持
-    if (this._planIdShown !== plan.id || this.data.selectedDayIndex >= trainingDays.length) {
+    if (this._planIdShown !== plan.id || this._scheduleShown !== JSON.stringify(plan.schedule || {}) || this._planDateShown !== util.getToday() || this.data.selectedDayIndex >= trainingDays.length) {
       const today = util.getToday();
       const records = util.getTrainingDates().map(date => util.getTrainingRecord(date));
       const overview = buildOverview(plan, records, today, '');
       this._planIdShown = plan.id;
+      this._scheduleShown = JSON.stringify(plan.schedule || {});
+      this._planDateShown = today;
       this.setData({ selectedDayIndex: Math.max(0, overview.selectedIndex) });
     }
 

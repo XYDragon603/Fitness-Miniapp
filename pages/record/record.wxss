@@ -151,3 +151,6 @@
 .note-wrap { position: relative; }
 .note-wrap .textarea { min-height: 220rpx; padding-bottom: 56rpx; }
 .note-count { position: absolute; right: 24rpx; bottom: 18rpx; font-size: 24rpx; color: var(--text-3); }
+.workout-tools { display: flex; justify-content: space-between; gap: 24rpx; color: #C8F76E; font-size: 24rpx; padding: 24rpx 0; }
+.set-type { display: block; font-size: 18rpx; color: #A7B0B4; line-height: 1.2; }
+.add-set { padding: 26rpx; text-align: center; color: #C8F76E; font-size: 26rpx; }

@@ -34,6 +34,7 @@ Page({
     if (id) wx.navigateTo({ url: `/packageExercise/pages/detail/detail?id=${id}` });
   },
 
+  openShare() { wx.navigateTo({ url: `/pages/report/report?date=${this.data.date}` }); },
   deleteRecord() {
     wx.showModal({
       title: '删除这天的记录？',

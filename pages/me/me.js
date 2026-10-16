@@ -23,5 +23,7 @@ Page({
   openHistory() { wx.navigateTo({ url: '/pages/history/history' }); },
   openStats() { wx.navigateTo({ url: '/pages/stats/stats' }); },
   openWeight() { wx.navigateTo({ url: '/pages/fatloss/fatloss' }); },
-  openBackup() { wx.navigateTo({ url: '/pages/backup/backup' }); }
+  openBackup() { wx.navigateTo({ url: '/pages/backup/backup' }); },
+  openWeekly() { wx.navigateTo({ url: '/pages/report/report?kind=week' }); },
+  openReminders() { wx.navigateTo({ url: '/pages/reminders/reminders' }); }
 });

@@ -27,9 +27,11 @@ function exerciseHistory(records, key, knownExercises) {
 function mondayOf(date) { return schedule.addDays(date, -(schedule.weekday(date) - 1)); }
 function previousWeek(date) { const start = schedule.addDays(mondayOf(date), -7); return { start, end: schedule.addDays(start, 6) }; }
 function newRecordsFor(record, previousRecords, knownExercises) {
-  return (record && record.exercises || []).flatMap(exercise => progression.detectNewRecords(exercise,
-    progression.findPersonalRecords(previousRecords, exercise.libraryId || exercise.id, knownExercises))
-    .map(pr => ({ ...pr, exerciseKey: exercise.libraryId || exercise.id, name: exercise.name || '训练动作', label: LABELS[pr.type] })));
+  return (record && record.exercises || []).flatMap(exercise => {
+    const key = progression.resolveExerciseKey(exercise, knownExercises);
+    return progression.detectNewRecords(exercise, progression.findPersonalRecords(previousRecords, key, knownExercises))
+      .map(pr => ({ ...pr, exerciseKey: key, name: exercise.name || '训练动作', label: LABELS[pr.type] }));
+  });
 }
 function sessionReport(record, allRecords, knownExercises) {
   if (!record || record.type === 'rest') return null;
@@ -37,7 +39,7 @@ function sessionReport(record, allRecords, knownExercises) {
   const sets = exercises.flatMap(exercise => progression.completedSets(exercise));
   const previous = (allRecords || []).filter(item => item && item.date < record.date);
   return { kind: 'session', date: record.date, title: record.dayName || '今日训练',
-    trainingCount: 1, volume: round(sets.reduce((sum, set) => sum + set.weight * set.reps, 0)),
+    trainingCount: sets.length ? 1 : 0, volume: round(sets.reduce((sum, set) => sum + set.weight * set.reps, 0)),
     setCount: sets.length, exerciseCount: exercises.filter(exercise => progression.completedSets(exercise).length).length,
     durationMin: finite(record.durationMin), newRecords: newRecordsFor(record, previous, knownExercises) };
 }

@@ -38,6 +38,8 @@
   </view>
 
   <view class="list-card me-links">
+    <view class="list-row" bindtap="openWeekly"><image class="icon-lg" src="/images/icons/stats-ink.svg" /><view class="list-row-body"><view class="list-row-title">训练周报</view><view class="list-row-desc">训练量、新纪录、饮食与体重变化</view></view><image class="chevron" src="/images/icons/chevron-right-grey.svg" /></view>
+    <view class="list-row" bindtap="openReminders"><image class="icon-lg" src="/images/icons/calendar-ink.svg" /><view class="list-row-body"><view class="list-row-title">训练提醒</view><view class="list-row-desc">设置提醒时间与微信订阅消息</view></view><image class="chevron" src="/images/icons/chevron-right-grey.svg" /></view>
     <view class="list-row" bindtap="openHistory">
       <image class="icon-lg" src="/images/icons/calendar-ink.svg" />
       <view class="list-row-body"><view class="list-row-title">历史日历</view><view class="list-row-desc">查看每天的训练记录</view></view>

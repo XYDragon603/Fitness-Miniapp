@@ -177,6 +177,7 @@ function dateTitle(dateStr) {
 }
 
 module.exports = {
+  exerciseKey: source => source && (source.libraryId || BUILTIN_MEDIA_NAMES[String(source.name || '').trim()] || source.id) || '',
   MEDIA_BASE_URL,
   MEDIA_ATTRIBUTION,
   exerciseMedia,

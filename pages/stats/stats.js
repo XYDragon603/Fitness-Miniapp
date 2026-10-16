@@ -49,18 +49,19 @@ Page({
   },
 
   loadPersonalRecords() {
-    const records = util.getTrainingDates().map(date => util.getTrainingRecord(date)).filter(Boolean);
+    const data = require('../../utils/insights-data.js');
+    const records = data.allRecords();
+    const known = data.knownExercises(records);
     const names = {};
     records.forEach(record => (record.exercises || []).forEach(exercise => {
-      const key = exercise.libraryId || exercise.id;
+      const key = progression.resolveExerciseKey(exercise, known);
       if (key && !names[key]) names[key] = exercise.name;
     }));
-    const personalRecords = Object.keys(names).map(key => ({ key, name: names[key], ...progression.findPersonalRecords(records, key) }))
-      .filter(item => item.bestWeight || item.bestE1RM);
+    const personalRecords = Object.keys(names).map(key => ({ key, name: names[key], ...progression.findPersonalRecords(records, key, known) }))
+      .filter(item => require('../../utils/training-insights.js').exerciseHistory(records, item.key, known).length);
     const topRecords = personalRecords
       .slice()
       .sort((a, b) => ((b.bestWeight && b.bestWeight.weight) || 0) - ((a.bestWeight && a.bestWeight.weight) || 0))
-      .slice(0, 5)
       .map(item => ({
         key: item.key,
         name: item.name,
@@ -77,8 +78,8 @@ Page({
   },
 
   openRecord(e) {
-    const id = e.currentTarget.dataset.libraryId;
-    if (id) wx.navigateTo({ url: `/packageExercise/pages/detail/detail?id=${id}` });
+    const item = this.data.topRecords.find(row => row.key === e.currentTarget.dataset.key);
+    if (item) wx.navigateTo({ url: `/pages/exercise-progress/progress?key=${encodeURIComponent(item.key)}&name=${encodeURIComponent(item.name)}` });
   },
 
   openFatLossPage() {

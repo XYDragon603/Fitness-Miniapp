@@ -250,6 +250,11 @@
     </view>
   </view>
 
+  <view class="sheet-mask" wx:if="{{exercisePickerVisible}}" bindtap="closeExercisePicker">
+    <view class="sheet dark" catchtap="noop"><view class="sheet-handle"></view><view class="sheet-title">切换训练动作</view>
+      <scroll-view scroll-y style="max-height: 55vh;"><view class="list-row" wx:for="{{exercises}}" wx:key="id" bindtap="pickExercise" data-index="{{index}}"><text>{{index + 1}}. {{item.name}}{{item.completed ? ' ✓' : ''}}</text></view></scroll-view>
+    </view>
+  </view>
   <view class="sheet-mask" wx:if="{{supersetOptions}}" bindtap="closeSuperset">
     <view class="sheet dark" catchtap="noop">
       <view class="sheet-handle"></view><view class="sheet-title">配对超级组</view>

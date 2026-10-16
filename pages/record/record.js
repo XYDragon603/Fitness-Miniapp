@@ -209,6 +209,7 @@ Page({
     guideVisible: false,
     activeGuide: getDefaultGuide(),
     currentExIndex: 0,
+    exercisePickerVisible: false,
     restDayLabel: '',
     restPresets: restTimer.REST_PRESETS,
     restDefaultSec: REST_DURATION_SECONDS,
@@ -1184,12 +1185,12 @@ Page({
   },
 
   chooseExercise() {
-    const exercises = this.data.exercises;
-    if (exercises.length < 2) return;
-    wx.showActionSheet({
-      itemList: exercises.map((item, index) => `${index + 1}. ${item.name}${item.completed ? ' ✓' : ''}`).slice(0, 6),
-      success: result => this.setData({ currentExIndex: result.tapIndex })
-    });
+    if (this.data.exercises.length > 1) this.setData({ exercisePickerVisible: true });
+  },
+  closeExercisePicker() { this.setData({ exercisePickerVisible: false }); },
+  pickExercise(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    if (Number.isInteger(index) && this.data.exercises[index]) this.setData({ currentExIndex: index, exercisePickerVisible: false });
   },
 
   openCurrentGuide() {

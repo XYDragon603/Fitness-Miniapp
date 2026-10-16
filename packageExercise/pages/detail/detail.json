@@ -1,4 +1,5 @@
 {
   "navigationBarTitleText": "动作详情",
-  "enableShareAppMessage": true
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true
 }

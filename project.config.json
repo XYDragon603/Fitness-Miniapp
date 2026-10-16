@@ -2,13 +2,33 @@
   "description": "健身计划记录小程序",
   "packOptions": {
     "ignore": [
-      { "type": "folder", "value": "tools" },
-      { "type": "folder", "value": "tests" },
-      { "type": "folder", "value": "docs" },
-      { "type": "folder", "value": "tmp-downloads" },
-      { "type": "folder", "value": "tmp-skill-build" }
+      {
+        "type": "folder",
+        "value": "tools"
+      },
+      {
+        "type": "folder",
+        "value": "tests"
+      },
+      {
+        "type": "folder",
+        "value": "docs"
+      },
+      {
+        "type": "folder",
+        "value": "tmp-downloads"
+      },
+      {
+        "type": "folder",
+        "value": "tmp-skill-build"
+      }
     ],
-    "include": [{ "type": "file", "value": "packageExercise/data/LICENSE.txt" }]
+    "include": [
+      {
+        "type": "file",
+        "value": "packageExercise/data/LICENSE.txt"
+      }
+    ]
   },
   "setting": {
     "bundle": false,

@@ -70,8 +70,8 @@
 .field-input.big { font-size: 44rpx; }
 .field-sep { width: 2rpx; height: 56rpx; background: var(--line); }
 .unit-g { min-width: 60rpx; text-align: center; font-size: 34rpx; color: var(--text); }
-.nutri-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
-.nutri-cell { width: calc(50% - 8rpx); padding: 22rpx 26rpx; background: var(--surface); border-radius: 22rpx; }
+.nutri-grid { display: flex; flex-wrap: wrap; justify-content: space-between; }
+.nutri-cell { width: 48.5%; margin-bottom: 16rpx; padding: 22rpx 26rpx; background: var(--surface); border-radius: 22rpx; }
 .nutri-label { font-size: 26rpx; color: var(--text-2); }
 .nutri-input-row { display: flex; align-items: center; gap: 12rpx; margin-top: 8rpx; }
 .nutri-input { flex: 1; min-width: 0; height: 72rpx; font-size: 46rpx; font-weight: 800; color: var(--text); }

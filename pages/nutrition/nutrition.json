@@ -2,5 +2,7 @@
   "navigationBarTitleText": "饮食",
   "navigationBarTextStyle": "white",
   "backgroundColorTop": "#12191C",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true
 }

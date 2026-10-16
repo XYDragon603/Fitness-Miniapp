@@ -2,19 +2,21 @@ const index = require('../../data/exercise-index.js');
 const details = require('../../data/exercise-detail.js');
 const library = require('../../lib/exercise-library.js');
 const ui = require('../../../utils/ui-helpers.js');
+const favorites = require('../../../utils/exercise-favorites.js');
 
 function titleCase(text) {
   return String(text || '').replace(/\b([a-z])/g, letter => letter.toUpperCase());
 }
 
 Page({
-  data: { item: null, mode: '', primaryLabels: [], mediaUrl: '', addedCount: 0, view: null },
+  data: { item: null, mode: '', primaryLabels: [], mediaUrl: '', addedCount: 0, view: null, favorited: false },
   onLoad(options = {}) {
     this._destroyed = false;
     const item = library.getDetail(index, details, options.id);
     this._item = item;
+    if (typeof wx.showShareMenu === 'function') wx.showShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] });
     this.setData({
-      item, mode: options.mode === 'pick' ? 'pick' : '',
+      item, mode: options.mode === 'pick' ? 'pick' : '', favorited: !!item && favorites.list(wx).includes(item.id),
       primaryLabels: item ? [item.targetLabel, item.muscleGroupLabel]
         .filter((value, position, all) => value && all.indexOf(value) === position) : [],
       mediaUrl: item && library.mediaBaseUrl ? `${library.mediaBaseUrl.replace(/\/$/, '')}/${encodeURIComponent(item.id)}.gif` : '',
@@ -35,6 +37,14 @@ Page({
     if (item) wx.setNavigationBarTitle({ title: item.name });
   },
   onUnload() { this._destroyed = true; },
+  onShow() { if (this._item) this.setData({ favorited: favorites.list(wx).includes(this._item.id) }); },
+  toggleFavorite() {
+    if (!this._item) return;
+    const favorited = favorites.toggle(this._item.id, wx);
+    this.setData({ favorited }); wx.showToast({ title: favorited ? '已收藏动作' : '已取消收藏', icon: 'none' });
+  },
+  onShareTimeline() { return { title: this._item ? this._item.name + ' · 动作库' : '训练动作库', query: this._item ? 'id=' + encodeURIComponent(this._item.id) : '' }; },
+  onAddToFavorites() { return this.onShareTimeline(); },
   openProgress() { if (this._item) wx.navigateTo({ url: `/pages/exercise-progress/progress?key=${encodeURIComponent(this._item.id)}&name=${encodeURIComponent(this._item.name)}` }); },
   onMediaError() { this.setData({ mediaUrl: '' }); },
   onGifError() { this.setData({ 'view.gif': '' }); },

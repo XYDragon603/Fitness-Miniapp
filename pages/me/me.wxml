@@ -37,6 +37,7 @@
     </view>
   </view>
 
+  <view class="me-app-actions"><button class="soft-btn" open-type="share">分享小程序 ↗</button><button class="soft-btn" bindtap="favoriteApp">收藏小程序 ☆</button></view>
   <view class="list-card me-links">
     <view class="list-row" bindtap="openWeekly"><image class="icon-lg" src="/images/icons/stats-ink.svg" /><view class="list-row-body"><view class="list-row-title">训练周报</view><view class="list-row-desc">训练量、新纪录、饮食与体重变化</view></view><image class="chevron" src="/images/icons/chevron-right-grey.svg" /></view>
     <view class="list-row" bindtap="openReminders"><image class="icon-lg" src="/images/icons/calendar-ink.svg" /><view class="list-row-body"><view class="list-row-title">训练提醒</view><view class="list-row-desc">设置提醒时间与微信订阅消息</view></view><image class="chevron" src="/images/icons/chevron-right-grey.svg" /></view>

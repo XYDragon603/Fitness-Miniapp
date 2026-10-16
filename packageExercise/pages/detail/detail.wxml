@@ -6,6 +6,7 @@
       <view class="detail-name-en">{{view.nameEn}}</view>
     </view>
 
+    <view class="detail-actions"><button class="soft-btn {{favorited ? 'is-favorite' : ''}}" bindtap="toggleFavorite">{{favorited ? '★ 已收藏' : '☆ 收藏动作'}}</button><button class="soft-btn" open-type="share">分享动作 ↗</button></view>
     <view class="section-link" bindtap="openProgress" style="margin-bottom: 24rpx;">查看进步曲线 ↗</view>
     <view class="dark-card demo">
       <text class="label-dark demo-label">动作示意</text>

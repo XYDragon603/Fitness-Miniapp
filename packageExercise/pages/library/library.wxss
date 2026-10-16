@@ -28,3 +28,5 @@
 
 .list-hint { text-align: center; padding: 24rpx 0; font-size: 24rpx; color: var(--text-3); }
 .attribution { text-align: center; padding: 8rpx 0 24rpx; font-size: 22rpx; color: var(--text-3); }
+.favorite-action { flex-shrink: 0; width: 64rpx; height: 76rpx; display: flex; align-items: center; justify-content: center; font-size: 42rpx; color: #6D7477; }
+.favorite-action.on { color: #5C7C20; }

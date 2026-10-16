@@ -2,8 +2,13 @@ const util = require('../../utils/util.js');
 const view = require('../../utils/records-view.js');
 
 Page({
+  onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
+  onShareTimeline() { return { title: '健行计划 · 每一次都算数', query: '' }; },
+  onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
+  favoriteApp() { require('../../utils/app-sharing.js').favoriteGuide(wx); },
   data: { stats: {}, week: [], weekCount: 0, latestWeight: null },
   onShow() {
+    require('../../utils/app-sharing.js').menu(wx);
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 4, hidden: false });
     const today = util.getToday();
     const recordsByDate = {};

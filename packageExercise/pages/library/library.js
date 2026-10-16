@@ -2,6 +2,7 @@ const index = require('../../data/exercise-index.js');
 const pinyinMap = require('../../data/exercise-pinyin.js');
 const library = require('../../lib/exercise-library.js');
 const ui = require('../../../utils/ui-helpers.js');
+const favorites = require('../../../utils/exercise-favorites.js');
 const PAGE_SIZE = 40;
 
 // 筛选条：腿部合并大腿/臀与小腿，标签用短名
@@ -14,7 +15,7 @@ const BODY_SHORT = { 'upper arms': '上臂', 'upper legs': '腿部', 'lower legs
 
 Page({
   data: {
-    keyword: '', bodyPart: 'all', equipmentGroup: 'all', mode: '', sortMode: 'default', dayLabel: '',
+    keyword: '', bodyPart: 'all', equipmentGroup: 'all', mode: '', sortMode: 'default', dayLabel: '', favoritesOnly: false,
     bodyParts: [], equipmentGroups: [], items: [], total: 0, hasMore: false,
     selectedCount: 0, attribution: `${index.attribution || ''} · ${ui.MEDIA_ATTRIBUTION}`
   },
@@ -27,6 +28,7 @@ Page({
     const validBodyPart = BODY_CHIPS.some(([key]) => key === options.bodyPart) || (index.bodyParts || []).some(part => part.key === options.bodyPart);
     this.setData({
       mode: options.mode === 'pick' ? 'pick' : '',
+      favoritesOnly: options.favorite === '1',
       dayLabel: options.mode === 'pick' ? pickContext : '',
       keyword: typeof options.keyword === 'string' ? options.keyword : '',
       bodyPart: validBodyPart ? options.bodyPart : 'all',
@@ -36,8 +38,10 @@ Page({
     this.applyFilters();
   },
   onShow() {
-    if (this._searchPending) this.applyFilters();
+    if (this._searchPending || this._favoritesKey !== JSON.stringify(favorites.list(wx))) this.applyFilters();
   },
+  toggleFavoritesOnly() { this.setData({ favoritesOnly: !this.data.favoritesOnly }); this.applyFilters(); },
+  toggleFavorite(event) { favorites.toggle(event.currentTarget.dataset.id, wx); this.applyFilters(); },
   onHide() { this.clearSearchTimer(); },
   onUnload() {
     this._destroyed = true;
@@ -79,7 +83,7 @@ Page({
     });
   },
   clearFilters() {
-    this.setData({ keyword: '', bodyPart: 'all', equipmentGroup: 'all' });
+    this.setData({ keyword: '', bodyPart: 'all', equipmentGroup: 'all', favoritesOnly: false });
     this.applyFilters();
   },
   present(item) {
@@ -94,13 +98,17 @@ Page({
       image: ui.equipmentImage(item.name, item.equipmentGroup),
       thumb: (ui.exerciseMedia(item.id) || {}).thumb || '',
       muscle: ui.muscleImage(item.targetLabel || item.bodyPartLabel, 'light'),
-      added: Boolean(this._added[item.id])
+      added: Boolean(this._added[item.id]),
+      favorite: (this._favoriteIds || []).includes(item.id)
     };
   },
   applyFilters() {
     this.clearSearchTimer();
     this._searchPending = false;
     this._filtered = library.filterExercises(this._all, this.data);
+    this._favoriteIds = favorites.list(wx);
+    this._favoritesKey = JSON.stringify(this._favoriteIds);
+    if (this.data.favoritesOnly) this._filtered = this._filtered.filter(item => this._favoriteIds.includes(item.id));
     if (this.data.sortMode === 'name') {
       this._filtered = this._filtered.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
     }

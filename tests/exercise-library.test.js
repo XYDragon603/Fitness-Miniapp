@@ -57,6 +57,7 @@ function createPage(relativePath, fixtureIndex, wxOverrides = {}) {
       if (request.endsWith('/exercise-detail.js')) return detailMap;
       if (request.endsWith('/exercise-library.js')) return library;
       if (request.endsWith('/utils/ui-helpers.js')) return require('../utils/ui-helpers.js');
+      if (request.endsWith('/utils/exercise-favorites.js')) return require('../utils/exercise-favorites.js');
       if (request.endsWith('/exercise-pinyin.js')) return require('../packageExercise/data/exercise-pinyin.js');
       throw new Error(`Unexpected dependency: ${request}`);
     },
@@ -167,6 +168,26 @@ browse.page.onLoad({ id: 'missing' });
 assert.strictEqual(browse.page.data.item, null);
 browse.page.onAddTap();
 assert.strictEqual(browse.calls.toasts.length, 1);
+
+// Favorites persist across detail/list pages and update when returning from a
+// detail. Sharing and native favorites never carry the plan-picker context.
+const favoriteStorage = {};
+const storageApi = { getStorageSync: key => favoriteStorage[key], setStorageSync: (key, value) => { favoriteStorage[key] = value; } };
+const favoriteDetail = createPage('packageExercise/pages/detail/detail.js', index, storageApi);
+favoriteDetail.page.onLoad({ id: '0025', mode: 'pick' });
+favoriteDetail.page.toggleFavorite();
+assert.strictEqual(favoriteDetail.page.data.favorited, true);
+assert.strictEqual(favoriteDetail.page.onAddToFavorites().query, 'id=0025');
+assert.strictEqual(favoriteDetail.page.onShareTimeline().query, 'id=0025');
+const favoriteList = createPage('packageExercise/pages/library/library.js', index, storageApi);
+favoriteList.page.onLoad({ favorite: '1' });
+assert.strictEqual(favoriteList.page.data.total, 1);
+assert.strictEqual(favoriteList.page.data.items[0].id, '0025');
+favoriteDetail.page.toggleFavorite(); favoriteList.page.onShow();
+assert.strictEqual(favoriteList.page.data.total, 0);
+favoriteList.page.clearFilters(); assert.strictEqual(favoriteList.page.data.total, 10);
+favoriteList.page.toggleFavorite({ currentTarget: { dataset: { id: '0025' } } });
+favoriteDetail.page.onShow(); assert.strictEqual(favoriteDetail.page.data.favorited, true);
 
 const paginate = createPage('packageExercise/pages/library/library.js', bigIndex);
 paginate.page.onLoad();

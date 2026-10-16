@@ -10,6 +10,7 @@
     <input class="hub-search-input" value="{{keyword}}" bindinput="onSearchInput" bindconfirm="search" confirm-type="search" placeholder="搜索动作、肌群或器械" placeholder-class="placeholder" aria-label="搜索动作、肌群或器械" />
   </view>
 
+  <view class="section-link" bindtap="openFavorites" style="margin-top: 24rpx;">★ 我的动作收藏 ↗</view>
   <view class="body-grid">
     <view wx:for="{{bodyParts}}" wx:key="key" class="body-card" data-key="{{item.key}}" bindtap="choosePart">
       <image class="body-figure" src="/images/muscles/dark/{{item.figure}}.png" mode="aspectFit" />

@@ -239,7 +239,7 @@ button { margin: 0; padding: 0; background: none; line-height: inherit; font-siz
 .subpage-scroll { height: 100vh; }
 
 /* ========== 底部弹层 ========== */
-.sheet-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 900; background: rgba(10, 14, 16, 0.55); display: flex; flex-direction: column; justify-content: flex-end; }
+.sheet-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1100; background: rgba(10, 14, 16, 0.55); display: flex; flex-direction: column; justify-content: flex-end; }
 .sheet {
   max-height: 88vh; overflow-y: auto; background: var(--bg);
   border-radius: 40rpx 40rpx 0 0; padding: 20rpx var(--gutter) calc(env(safe-area-inset-bottom) + 32rpx);

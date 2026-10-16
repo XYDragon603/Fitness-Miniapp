@@ -12,12 +12,16 @@ function daysBetween(from, to) {
 }
 
 Page({
+  onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
+  onShareTimeline() { return { title: '健行计划 · 每一次都算数', query: '' }; },
+  onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
   data: {
     dateLabel: '',
     title: '今天，动起来',
     planTitle: '',
     day: null,
     dayOptions: [],
+    dayPickerVisible: false,
     selectedDayId: '',
     hasTodayRecord: false,
     week: [],
@@ -26,6 +30,7 @@ Page({
   },
 
   onShow() {
+    require('../../utils/app-sharing.js').menu(wx);
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 0, hidden: false });
     this.loadOverview();
     this.maybeShowOnboarding();
@@ -150,13 +155,11 @@ Page({
   },
 
   switchDay() {
-    const options = this.data.dayOptions;
-    if (options.length < 2) return;
-    wx.showActionSheet({
-      itemList: options.map((item, index) => `第 ${index + 1} 天 · ${item.name}`).slice(0, 6),
-      success: result => this.selectDay({ currentTarget: { dataset: { id: options[result.tapIndex].id } } })
-    });
+    if (this.data.dayOptions.length > 1) this.setData({ dayPickerVisible: true });
   },
+  closeDayPicker() { this.setData({ dayPickerVisible: false }); },
+  pickDay(event) { this.selectDay(event); this.closeDayPicker(); },
+  noop() {},
 
   startTraining() {
     if (!this.data.day) return;

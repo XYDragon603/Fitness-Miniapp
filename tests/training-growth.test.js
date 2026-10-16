@@ -84,6 +84,14 @@ assert.strictEqual(new Date(copies[0].time).getDate(), 16);
 assert.strictEqual(view.buildMealGroups(copies)[0].key, 'breakfast');
 assert.strictEqual(JSON.stringify(yesterday), before);
 assert.deepStrictEqual(foods.combine([{ name: '燕麦', calories: 111 }], yesterday).map(food => food.calories), [111, 200]);
+const oldFavorite = { name: '收藏牛奶', estimatedWeight: 250, calories: 150, protein: 8, fat: 5, carbs: 12 };
+const upgradedFavorite = foods.combine([oldFavorite], [])[0];
+const foodSuggest = require('../utils/food-suggest');
+const favoriteSuggestion = foodSuggest.suggestFoods('收藏牛奶', [upgradedFavorite])[0];
+const halfPortion = foodSuggest.applySuggestion(favoriteSuggestion, 125);
+assert.strictEqual(halfPortion.calories, '75');
+assert.strictEqual(halfPortion.protein, '4');
+assert.strictEqual(oldFavorite.per100, undefined, 'old favorite values are upgraded without mutating storage objects');
 
 // Image and mini-program share snapshots have identical metrics, bounded text,
 // no user records/food details, and retain nulls instead of inventing zeros.

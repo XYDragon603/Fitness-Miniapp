@@ -10,14 +10,19 @@ const BODY_PARTS = [
 ];
 
 Page({
+  onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
+  onShareTimeline() { return { title: '健行计划 · 动作库', query: '' }; },
+  onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
   data: { keyword: '', bodyParts: BODY_PARTS },
   onShow() {
+    require('../../utils/app-sharing.js').menu(wx);
     if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ selected: 1, hidden: false });
   },
   onSearchInput(event) { this.setData({ keyword: event.detail.value }); },
   search() { this.openLibrary({ keyword: this.data.keyword }); },
   choosePart(event) { this.openLibrary({ bodyPart: event.currentTarget.dataset.key }); },
   browseAll() { this.openLibrary({}); },
+  openFavorites() { this.openLibrary({ favorite: '1' }); },
   openLibrary(filters) {
     const query = Object.keys(filters).filter(key => filters[key]).map(key => key + '=' + encodeURIComponent(filters[key])).join('&');
     wx.navigateTo({ url: '/packageExercise/pages/library/library' + (query ? '?' + query : '') });

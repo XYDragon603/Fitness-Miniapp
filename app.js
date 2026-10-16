@@ -1,5 +1,6 @@
 const workoutPlan = require('./utils/workout-plan.js');
 const cloudBackup = require('./utils/cloud-backup.js');
+const cloudConfig = require('./config/cloud.js');
 
 App({
   onLaunch() {
@@ -31,11 +32,10 @@ App({
 
     try {
       wx.cloud.init({
+        env: cloudConfig.envId,
         traceUser: true
       });
-      this.globalData.cloudEnvId = wx.cloud && wx.cloud.DYNAMIC_CURRENT_ENV
-        ? wx.cloud.DYNAMIC_CURRENT_ENV
-        : 'dynamic_current_env';
+      this.globalData.cloudEnvId = cloudConfig.envId;
     } catch (error) {
       console.warn('wx.cloud.init failed', error);
     }

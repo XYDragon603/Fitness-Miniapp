@@ -14,6 +14,7 @@
   </scroll-view>
 
   <view class="result-row">
+    <view class="result-sort" bindtap="toggleFavoritesOnly">{{favoritesOnly ? '★ 只看收藏' : '☆ 我的收藏'}}</view>
     <text class="result-count">找到 {{total}} 个动作</text>
     <view class="result-sort" bindtap="onSortTap">{{sortMode === 'name' ? '按名称排序' : '默认排序'}}<image class="icon-sm" src="/images/icons/chevron-down-ink.svg" /></view>
   </view>
@@ -35,6 +36,7 @@
         <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
       </view>
     </view>
+    <view class="favorite-action {{item.favorite ? 'on' : ''}}" data-id="{{item.id}}" catchtap="toggleFavorite">{{item.favorite ? '★' : '☆'}}</view>
     <block wx:if="{{mode === 'pick'}}">
       <image class="ex-muscle" src="{{item.muscle}}" mode="aspectFit" lazy-load />
       <view class="ex-add" data-id="{{item.id}}" catchtap="onAddTap">
@@ -47,9 +49,9 @@
 
   <view wx:if="{{!total}}" class="empty">
     <view class="empty-figure"><image class="icon-lg" src="/images/icons/search-grey.svg" /></view>
-    <view class="empty-title">没有找到相关动作</view>
-    <view class="empty-text">试试其他关键词，或调整筛选条件</view>
-    <view class="soft-btn empty-action" bindtap="clearFilters">清除筛选</view>
+    <view class="empty-title">{{favoritesOnly ? '收藏中没有匹配的动作' : '没有找到相关动作'}}</view>
+    <view class="empty-text">{{favoritesOnly ? '在动作详情点“收藏动作”，就可以在这里找到。' : '试试其他关键词，或调整筛选条件'}}</view>
+    <view class="soft-btn empty-action" bindtap="clearFilters">{{favoritesOnly ? '浏览全部动作' : '清除筛选'}}</view>
   </view>
   <view wx:if="{{hasMore}}" class="list-hint">继续下滑，查看更多动作</view>
   <view class="attribution">{{attribution}}</view>

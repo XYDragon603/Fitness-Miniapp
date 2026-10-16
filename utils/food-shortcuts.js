@@ -6,11 +6,19 @@ function portion(food) {
 }
 function combine(favorites, frequent, limit) {
   const names = new Set();
-  return (favorites || []).concat(frequent || []).filter(food => {
+  return (favorites || []).map(favorite).concat(frequent || []).filter(food => {
     const name = food && String(food.name || '').trim();
     if (!name || names.has(name)) return false;
     names.add(name); return true;
   }).slice(0, limit || 12);
+}
+function favorite(food) {
+  const result = portion(food);
+  if (result.estimatedWeight > 0) {
+    result.per100 = {};
+    ['calories', 'protein', 'fat', 'carbs'].forEach(key => { result.per100[key] = result[key] * 100 / result.estimatedWeight; });
+  } else result.per100 = null;
+  return result;
 }
 function copyMeal(foods, indices, date, generateId) {
   return (indices || []).map(index => foods[index]).filter(Boolean).map((food, index) => {
@@ -20,4 +28,4 @@ function copyMeal(foods, indices, date, generateId) {
     return { ...portion(food), id: generateId() + '_' + index, source: 'copy', time: local.toISOString(), imagePath: food.imagePath || '' };
   });
 }
-module.exports = { portion, combine, copyMeal };
+module.exports = { portion, favorite, combine, copyMeal };

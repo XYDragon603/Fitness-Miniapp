@@ -328,6 +328,9 @@ function buildBodyTypeSummary(profile) {
 }
 
 Page({
+  onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
+  onShareTimeline() { return { title: '健行计划 · 饮食记录', query: '' }; },
+  onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
   data: {
     todayCN: '',
     todayStr: '',
@@ -1634,7 +1637,7 @@ Page({
     const favorites = wx.getStorageSync('favorite_foods') || [];
     const found = favorites.some(item => item.name === food.name);
     wx.setStorageSync('favorite_foods', found ? favorites.filter(item => item.name !== food.name)
-      : [require('../../utils/food-shortcuts.js').portion(food)].concat(favorites).slice(0, 50));
+      : [require('../../utils/food-shortcuts.js').favorite(food)].concat(favorites).slice(0, 50));
     this.setData({ frequentFoods: this.loadFrequentFoods() });
     this.openMealSheet({ currentTarget: { dataset: { index: this.data.mealGroups.findIndex(group => group.key === this.data.mealSheet.key) } } });
     wx.showToast({ title: found ? '已移出常吃' : '已加入常吃', icon: 'none' });

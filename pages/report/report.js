@@ -25,7 +25,7 @@ Page({
     this.options = { kind: 'week', start: require('../../utils/schedule.js').addDays(this.data.report.start, -7) };
     this.loadReport();
   },
-  onShareAppMessage() { const report = this.data.report || {}; return { title: report.kind === 'week' ? '我的训练周报' : '又一次训练完成', path: card.sharePath(report) }; },
+  onShareAppMessage() { const report = this.data.report; if (!report) return require('../../utils/app-sharing.js').home(); return { title: report.kind === 'week' ? '我的训练周报' : '又一次训练完成', path: card.sharePath(report) }; },
   onShareTimeline() { const share = this.onShareAppMessage(); return { title: share.title, query: share.path.split('?')[1] }; },
   saveImage() {
     if (this.data.saving || !this.data.report) return;

@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "训练计划",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true
 }

@@ -13,10 +13,12 @@
       <view class="b-time num">{{cloud.savedAt}}</view>
       <view class="b-meta num">{{cloud.keyCount}} 项数据 · {{cloud.size}}</view>
     </block>
+    <block wx:elif="{{error}}"><view class="b-state">云端状态无法确认</view></block>
     <block wx:else><view class="b-state">还没有云端备份</view></block>
   </view>
 
   <view class="b-error" wx:if="{{error}}"><image class="icon-sm" src="/images/icons/info-grey.svg" />{{error}}</view>
+  <view class="section-link" wx:if="{{error && diagnostic}}" bindtap="copyDiagnostic">复制诊断信息</view>
 
   <view class="list-card b-local">
     <view class="list-row"><text class="b-label">本机数据</text><text class="b-value num">{{local.keyCount}} 项 · {{local.usedKb}} KB</text></view>
@@ -24,9 +26,10 @@
   </view>
 
   <view class="b-actions">
-    <view class="lime-btn {{busy ? 'disabled' : ''}}" bindtap="backup"><image class="icon" src="/images/icons/save-ink.svg" />立即备份</view>
+    <view class="lime-btn {{busy || loading || !available ? 'disabled' : ''}}" bindtap="backup"><image class="icon" src="/images/icons/save-ink.svg" />立即备份</view>
     <view class="ghost-btn {{busy || !cloud ? 'b-disabled' : ''}}" bindtap="restore">从云端恢复</view>
+    <view class="section-link" wx:if="{{error && !loading}}" bindtap="refresh">重新检查云端连接 ↻</view>
   </view>
 
-  <view class="b-note">离开小程序时，如果数据有变化、且距离上次备份超过 6 小时，会自动备份一次。备份只有你自己的微信账号能读取。</view>
+  <view class="b-note">首次手动备份成功后，离开小程序时若数据有变化、且距上次备份超过 6 小时，会自动备份。备份包含记录和设置，照片本体不包含。</view>
 </view>

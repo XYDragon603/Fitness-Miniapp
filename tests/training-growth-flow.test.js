@@ -158,4 +158,17 @@ reminderPage.changeEnabled({ detail: { value: true } }); reminderPage.save();
 const reloadedReminder = loadPage('pages/reminders/reminders.js', scheduleApp); reloadedReminder.onShow();
 assert.strictEqual(reloadedReminder.data.settings.time, '19:15');
 assert.strictEqual(reloadedReminder.data.settings.enabled, true);
+
+// Picker sheets retain items beyond the native action-sheet six-item limit.
+const longPlan = { id: 'long_plan', title: '长计划', days: Array.from({ length: 8 }, (_, day) => ({ id: 'day' + day, name: '训练日' + day,
+  exercises: Array.from({ length: 8 }, (_, index) => ({ id: 'ex' + index, name: '动作' + index, weeks: { 1: { sets: 1, reps: '10' } } })) })) };
+const longRecord = loadPage('pages/record/record.js', { globalData: {}, getActiveTrainingPlan: () => longPlan });
+longRecord.onLoad(); longRecord.setPagePlan(longPlan); longRecord.data.selectedDayIndex = 0; longRecord.loadExercises();
+longRecord.chooseExercise(); assert.strictEqual(longRecord.data.exercisePickerVisible, true);
+longRecord.pickExercise({ currentTarget: { dataset: { index: 7 } } });
+assert.strictEqual(longRecord.data.currentExIndex, 7); assert.strictEqual(longRecord.data.exercisePickerVisible, false);
+const longToday = loadPage('pages/today/today.js', { refreshTrainingPlanState: () => ({ activePlan: longPlan }) });
+longToday.loadOverview(); longToday.switchDay(); assert.strictEqual(longToday.data.dayPickerVisible, true);
+longToday.pickDay({ currentTarget: { dataset: { id: 'day7' } } });
+assert.strictEqual(longToday.data.selectedDayId, 'day7'); assert.strictEqual(longToday.data.dayPickerVisible, false);
 console.log('super-set alternation, type persistence, meal shortcuts, and report export flow tests passed');

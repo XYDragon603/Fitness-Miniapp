@@ -1,165 +1,78 @@
-<view class="container stats-page">
-  <view class="page-header stats-header">
-    <view class="page-title">数据统计</view>
-    <view class="page-desc">用更清晰、更平静的方式回看这一段时间的训练节奏与营养轨迹。</view>
+<nav-bar back />
+<view class="page stats">
+  <view class="hero">
+    <view class="hero-title">统计与个人纪录</view>
+    <view class="hero-sub">用数据记录努力，看见更好的自己。</view>
   </view>
 
-  <view class="stats-hero card">
-    <view class="hero-top">
-      <view class="hero-copy">
-        <view class="hero-kicker">AIR HEALTH WEEKLY</view>
-        <view class="hero-title">本周训练概览</view>
-        <view class="hero-subtitle">用更轻的方式看见自己的训练节奏，把进度和连续性放在一张卡片里。</view>
-      </view>
-
-      <view class="hero-highlight">
-        <view class="hero-highlight-value">{{stats.completionRate}}%</view>
-        <view class="hero-highlight-label">完成率</view>
-      </view>
-    </view>
-
-    <view class="hero-metrics">
-      <view class="hero-metric">
-        <view class="hero-metric-value">{{stats.totalDays}}</view>
-        <view class="hero-metric-label">训练天数</view>
-      </view>
-      <view class="hero-metric">
-        <view class="hero-metric-value streak-value">{{stats.streak}}</view>
-        <view class="hero-metric-label">连续记录</view>
-      </view>
-      <view class="hero-metric">
-        <view class="hero-metric-value rate-value">{{stats.completedExercises}}</view>
-        <view class="hero-metric-label">已完成动作</view>
-      </view>
-      <view class="hero-metric">
-        <view class="hero-metric-value rest-value">{{stats.restDays}}</view>
-        <view class="hero-metric-label">休息天数</view>
-      </view>
-    </view>
-
-    <view class="hero-footnote">计划记录 {{stats.planRecordedDays}} 天 = 训练 {{stats.totalDays}} 次 + 休息 {{stats.restDays}} 天</view>
-  </view>
-
-  <view class="distribution-card card">
-    <view class="card-header stats-card-header">
+  <view class="dark-card st-card">
+    <view class="st-top">
       <view>
-        <view class="card-title">训练分布</view>
-        <view class="card-subtitle">看看你的训练重心更多落在哪些日程上。</view>
+        <text class="label-dark st-label">累计训练</text>
+        <view class="st-total num">{{stats.totalDays || 0}}<text class="st-total-unit"> 天</text></view>
+      </view>
+      <view class="st-ring">
+        <image class="st-ring-img" src="{{ring}}" />
+        <view class="st-ring-center"><text class="st-ring-pct num">{{stats.completionRate || 0}}<text class="st-ring-sym">%</text></text><text class="st-ring-label">完成率</text></view>
       </view>
     </view>
-
-    <view class="dist-list" wx:if="{{distributionItems.length > 0}}">
-      <view class="dist-item" wx:for="{{distributionItems}}" wx:key="key">
-        <view class="dist-header">
-          <view class="dist-label">
-            <view class="dist-dot" style="background: {{item.color}};"></view>
-            <view class="dist-name">{{item.name}}</view>
-          </view>
-          <view class="dist-count">{{item.count}} 次</view>
-        </view>
-        <view class="dist-track">
-          <view
-            class="dist-fill"
-            style="width: {{item.percent}}%; background: {{item.color}};"
-          ></view>
-        </view>
+    <view class="st-tiles">
+      <view class="dark-tile st-tile">
+        <text class="label-dark">完成动作</text>
+        <view class="st-tile-row"><text class="st-tile-value num">{{stats.completedExercises || 0}}</text><image class="icon-lg" src="/images/icons/dumbbell-lime.svg" /></view>
       </view>
-    </view>
-
-    <view class="empty-state stats-empty-state" wx:else>
-      <view class="empty-text">完成一次训练后，这里会逐步展示不同训练日的分布。</view>
-    </view>
-  </view>
-
-  <view class="completion-card card">
-    <view class="card-header stats-card-header">
-      <view>
-        <view class="card-title">动作完成情况</view>
-        <view class="card-subtitle">把完成率、已完成和未完成拆开看，更容易找到下一步进度。</view>
-      </view>
-    </view>
-
-    <view class="completion-stats">
-      <view class="completion-circle">
-        <view class="circle-outer" style="--completion-percent: {{stats.completionRate}}%;">
-          <view class="circle-inner">
-            <view class="circle-value">{{stats.completionRate}}%</view>
-            <view class="circle-label">完成率</view>
-          </view>
-        </view>
-      </view>
-
-      <view class="completion-detail">
-        <view class="completion-row">
-          <view class="completion-key">总动作数</view>
-          <view class="completion-val">{{stats.totalExercises}}</view>
-        </view>
-        <view class="completion-row">
-          <view class="completion-key">已完成</view>
-          <view class="completion-val done-val">{{stats.completedExercises}}</view>
-        </view>
-        <view class="completion-row">
-          <view class="completion-key">未完成</view>
-          <view class="completion-val undone-val">{{stats.uncompletedExercises}}</view>
-        </view>
+      <view class="dark-tile st-tile">
+        <text class="label-dark">恢复</text>
+        <view class="st-tile-row"><view class="st-tile-value num">{{stats.restDays || 0}}<text class="st-tile-unit"> 天</text></view><image class="icon-lg" src="/images/icons/leaf-lime.svg" /></view>
       </view>
     </view>
   </view>
 
-  <view class="recent-card card">
-    <view class="card-header stats-card-header">
-      <view>
-        <view class="card-title">最近 7 天</view>
-        <view class="card-subtitle">用最简洁的方式看到最近一周的训练节奏。</view>
-      </view>
-    </view>
-
-    <view class="week-grid">
-      <view
-        class="week-day {{item.hasRecord ? 'has-record' : ''}}"
-        wx:for="{{recentDays}}"
-        wx:key="date"
-      >
-        <view class="week-day-label">{{item.weekDay}}</view>
-        <view class="week-day-dot {{item.recordType === 'rest' ? 'rest' : ''}} {{item.hasRecord ? 'active' : ''}}">
-          <view wx:if="{{item.recordType === 'training'}}" class="week-day-check">✓</view>
-          <view wx:if="{{item.recordType === 'rest'}}" class="week-day-rest">休</view>
-        </view>
-        <view class="week-day-date">{{item.day}}</view>
-      </view>
+  <view class="section-head">
+    <text class="section-title">本周训练频次</text>
+    <view class="section-link" bindtap="openHistory">查看详情<image class="icon" src="/images/icons/chevron-right-grey.svg" /></view>
+  </view>
+  <view class="st-week">
+    <view class="st-week-col" wx:for="{{week}}" wx:key="date">
+      <text class="st-week-count num">{{item.count}}</text>
+      <view class="st-week-track"><view class="st-week-bar {{item.count ? 'on' : ''}}" style="height: {{item.count ? item.height : 8}}%"></view></view>
+      <text class="st-week-label">{{item.label}}</text>
     </view>
   </view>
 
-  <view class="nutrition-stats-card card">
-    <view class="card-header stats-card-header">
-      <view>
-        <view class="card-title">近 7 天营养摄入</view>
-        <view class="card-subtitle">用轻量图形记下本周热量摄入的变化趋势。</view>
+  <view class="section-head">
+    <text class="section-title">个人纪录</text>
+    <text class="section-meta" wx:if="{{personalRecords.length}}">共 {{personalRecords.length}} 项</text>
+  </view>
+  <view class="list-card" wx:if="{{topRecords.length}}">
+    <view class="list-row st-pr" wx:for="{{topRecords}}" wx:key="key" bindtap="openRecord" data-library-id="{{item.libraryId}}">
+      <view class="st-pr-icon"><image class="st-pr-img" src="{{item.image}}" mode="aspectFit" /></view>
+      <view class="list-row-body">
+        <view class="list-row-title">{{item.name}}</view>
+        <view class="st-pr-line"><text class="st-pr-k">最重重量</text><text class="st-pr-v num">{{item.weight}}</text><text class="st-pr-u">kg</text></view>
       </view>
-    </view>
-
-    <view wx:if="{{nutritionStats.length > 0}}">
-      <view
-        class="nutrition-day-row"
-        wx:for="{{nutritionStats}}"
-        wx:key="date"
-      >
-        <view class="nd-date">{{item.dateCN}}</view>
-        <view class="nd-bars">
-          <view class="nd-bar-group">
-            <view class="nd-track">
-              <view class="nd-bar cal-bar" style="width: {{item.calPercent}}%;"></view>
-            </view>
-            <view class="nd-bar-label">{{item.total.calories}} kcal</view>
-          </view>
-        </view>
+      <view class="st-pr-side">
+        <text class="st-pr-k">估算 1RM</text>
+        <view><text class="st-pr-v num">{{item.e1rm}}</text><text class="st-pr-u"> kg</text></view>
       </view>
-    </view>
-
-    <view class="empty-state stats-empty-state" wx:else>
-      <view class="empty-text">暂无营养数据</view>
+      <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
     </view>
   </view>
+  <view class="empty" wx:else>
+    <view class="empty-figure"><image class="icon-lg" src="/images/icons/trophy-ink.svg" /></view>
+    <view class="empty-title">还没有个人纪录</view>
+    <view class="empty-text">完成带重量的训练组后，会自动记录最佳成绩。</view>
+  </view>
 
-  <view class="page-spacer"></view>
+  <block wx:if="{{distribution.length}}">
+    <view class="section-head"><text class="section-title">训练部位分布</text><text class="section-meta">全部记录</text></view>
+    <view class="st-dist">
+      <view class="st-dist-seg" wx:for="{{distribution}}" wx:key="name" style="flex: {{item.count}}; background: {{item.color}};"></view>
+    </view>
+    <view class="st-dist-labels">
+      <view class="st-dist-label" wx:for="{{distribution}}" wx:key="name" style="flex: {{item.count}};">
+        <text class="st-dist-pct num">{{item.percent}}%</text><text class="st-dist-name">{{item.name}}</text>
+      </view>
+    </view>
+  </block>
 </view>

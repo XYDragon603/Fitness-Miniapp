@@ -1,16 +1,48 @@
 const app = getApp();
 const util = require('../../utils/util.js');
+const progression = require('../../utils/progression.js');
 const workoutPlan = require('../../utils/workout-plan.js');
+const restTimer = require('../../utils/rest-timer.js');
+const ui = require('../../utils/ui-helpers.js');
+const nextTarget = require('../../utils/next-target.js');
 
-const REST_DURATION_SECONDS = 90;
+const REST_DURATION_SECONDS = restTimer.DEFAULT_REST_SEC;
 const VISIBLE_WEEK = 1;
 const DEFAULT_REST_FEELING = '精力不错';
 
+const WEIGHT_STEP = 2.5;
+const REPS_STEP = 1;
+
 function formatTimerLabel(seconds) {
-  const safeSeconds = Math.max(0, Number(seconds) || 0);
-  const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, '0');
-  const remain = String(safeSeconds % 60).padStart(2, '0');
-  return `${minutes}:${remain}`;
+  return ui.formatRestLabel(seconds);
+}
+
+function formatWeight(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  return String(Math.round(num * 10) / 10);
+}
+
+// 一次训练里最好的一组：重量优先，其次次数
+function bestSetOf(exercise, doneOnly) {
+  const sets = exercise && Array.isArray(exercise.sets) ? exercise.sets : [];
+  return sets.reduce((best, set) => {
+    if (doneOnly && !(set && set.done)) return best;
+    const weight = Number(set && set.weight) || 0;
+    const reps = Number(set && set.reps) || 0;
+    if (!reps) return best;
+    if (!best || weight > best.weight || (weight === best.weight && reps > best.reps)) return { weight, reps };
+    return best;
+  }, null);
+}
+
+function setLabel(set) {
+  if (!set) return '';
+  return `${set.weight ? formatWeight(set.weight) + ' kg' : '自重'} × ${set.reps}`;
+}
+
+function dotDate(dateStr) {
+  return String(dateStr || '').replace(/-/g, '.');
 }
 
 function getDefaultGuide(exerciseName) {
@@ -28,9 +60,13 @@ function getDefaultGuide(exerciseName) {
 function getDefaultRestTimerData() {
   return {
     restTimerVisible: false,
+    restTimerFinished: false,
     restTimerSeconds: REST_DURATION_SECONDS,
     restTimerLabel: formatTimerLabel(REST_DURATION_SECONDS),
-    restTimerExerciseName: ''
+    restTimerExerciseName: '',
+    restProgress: 1,
+    restCaption: '',
+    restNext: null
   };
 }
 
@@ -98,6 +134,17 @@ function extractWeightAtIndex(sets, index) {
   return Number.isFinite(value) ? value : 0;
 }
 
+function buildSetWeightOptions(savedSet, previousRecord, setIndex) {
+  const referenceWeight = Math.max(
+    extractWeightAtIndex(savedSet, setIndex),
+    extractWeightAtIndex(previousRecord && previousRecord.exercise && previousRecord.exercise.sets, setIndex),
+    extractMaxWeightFromSets(savedSet),
+    extractMaxWeightFromSets(previousRecord && previousRecord.exercise && previousRecord.exercise.sets)
+  );
+
+  return util.buildWeightOptions(referenceWeight);
+}
+
 function isRestDay(day) {
   if (typeof util.isRestDay === 'function') {
     return util.isRestDay(day);
@@ -159,20 +206,29 @@ Page({
     overloadSuggestionMap: {},
     guideVisible: false,
     activeGuide: getDefaultGuide(),
+    currentExIndex: 0,
+    restDayLabel: '',
+    restPresets: restTimer.REST_PRESETS,
+    restDefaultSec: REST_DURATION_SECONDS,
+    targetView: null,
     ...getDefaultRestTimerData()
   },
 
   onLoad() {
+    const storedDuration = Number(wx.getStorageSync('rest_timer_default_sec'));
+    this.defaultRestSec = restTimer.REST_PRESETS.includes(storedDuration) ? storedDuration : restTimer.DEFAULT_REST_SEC;
+    this.setData({ restDefaultSec: this.defaultRestSec });
     this.initPage();
   },
 
   onShow() {
     this.syncCustomTabBar();
-    if (this.consumeIncomingSelection()) {
-      return;
+    const returning = this.pageHidden;
+    this.pageHidden = false;
+    if (!this.consumeIncomingSelection() && (!returning || this.data.todayStr !== util.getToday())) {
+      this.initPage();
     }
-
-    this.initPage();
+    this.resumeRestTimer();
   },
 
   syncCustomTabBar() {
@@ -187,7 +243,7 @@ Page({
 
     tabBar.setData({
       selected: 1,
-      hidden: false
+      hidden: !!(this.data.restTimerVisible || this.data.guideVisible)
     });
   },
 
@@ -207,7 +263,10 @@ Page({
   },
 
   onHide() {
-    this.resetRestTimerState();
+    this.pageHidden = true;
+    this.clearRestTimer();
+    this.clearRestDismissTimer();
+    this.setRestKeepScreenOn(false);
     this.setCustomTabBarHidden(false);
   },
 
@@ -237,6 +296,7 @@ Page({
   initPage() {
     const today = util.getToday();
     const existingRecord = util.getTrainingRecord(today);
+    this._baselineToday = existingRecord || null;
 
     this.setData({
       today: util.formatDateCN(today),
@@ -264,14 +324,19 @@ Page({
     app.globalData.selectedDayIndex = null;
     app.globalData.selectedDayId = '';
 
-    if (existingRecord) {
+    const plan = app.getActiveTrainingPlan();
+    const targetIndex = selectedDayId ? plan.days.findIndex(day => day.id === selectedDayId) : Number(selectedDayIndex);
+    const target = plan.days[targetIndex];
+    if (!target) return false;
+    if (existingRecord && util.getRecordDayId(existingRecord) === target.id
+      && (!existingRecord.planId || existingRecord.planId === plan.id)) {
       this.restoreRecord(existingRecord);
       return true;
     }
 
-    this.setPagePlan(app.getActiveTrainingPlan());
+    this.setPagePlan(plan);
     this.setData({
-      selectedDayIndex
+      selectedDayIndex: targetIndex
     }, () => {
       this.loadExercises(null, selectedDayId);
     });
@@ -342,10 +407,14 @@ Page({
       : getDefaultRestForm();
 
     this.effectiveWeek = VISIBLE_WEEK;
-    this.clearRestTimer();
+    this.resetRestTimerState();
+    this.applyStatusBar(false);
+    const restPlan = this.currentPlan || app.getActiveTrainingPlan();
+    const dayNumber = restPlan && restPlan.days ? restPlan.days.findIndex(item => item.id === safeDay.id) + 1 : 0;
 
     this.setData({
       isRestDay: true,
+      restDayLabel: `${dayNumber > 0 ? '第 ' + dayNumber + ' 天 · ' : ''}${safeDay.name || '休息日'}`,
       currentDayInfo: safeDay,
       exercises: [],
       currentDayColor: safeDay.color || '#5F9A88',
@@ -387,24 +456,28 @@ Page({
 
     const exercises = dayExercises.map(exercisePlan => {
       const weekPlan = exercisePlan.weeks[effectiveWeek] || exercisePlan.weeks[VISIBLE_WEEK];
-      const previousRecord = util.getPreviousExerciseRecord(exercisePlan.id, today);
-      const overloadSuggestion = util.getProgressiveOverloadSuggestion(exercisePlan.id, today);
+      const history = util.getPreviousExerciseRecords(exercisePlan.id, today, 2, exercisePlan.libraryId);
+      const previousRecord = history[0] || (!exercisePlan.libraryId ? util.getPreviousExerciseRecord(exercisePlan.id, today) : null);
+      const suggestion = progression.suggestNextTarget({ planReps: weekPlan.reps, planSets: weekPlan.sets, history });
+      const overloadSuggestion = { ...suggestion, show: suggestion.type !== 'none' };
       const savedExercise = savedExerciseMap[exercisePlan.id];
+      const target = savedExercise ? null : nextTarget.getNextTarget(exercisePlan.libraryId || exercisePlan.id);
       const repsMeta = util.parsePlanRepsMeta(weekPlan.reps, weekPlan.sets);
+      const previousBest = bestSetOf(previousRecord && previousRecord.exercise);
       const sets = createEmptySets(weekPlan.sets).map((set, setIndex) => {
         const savedSet = savedExercise && Array.isArray(savedExercise.sets) ? savedExercise.sets[setIndex] : null;
         const fallbackReps = repsMeta.suggestedBySet[setIndex] || '';
-        const referenceWeight = Math.max(
-          extractWeightAtIndex(savedExercise && savedExercise.sets, setIndex),
-          extractWeightAtIndex(previousRecord && previousRecord.exercise && previousRecord.exercise.sets, setIndex),
-          extractMaxWeightFromSets(savedExercise && savedExercise.sets),
-          extractMaxWeightFromSets(previousRecord && previousRecord.exercise && previousRecord.exercise.sets)
-        );
+        const targetWeight = target && target.weights[setIndex] !== undefined ? target.weights[setIndex] : '';
+        const targetReps = target && target.repsBySet[setIndex] !== undefined ? target.repsBySet[setIndex] : '';
+        const previousSet = previousRecord && previousRecord.exercise && Array.isArray(previousRecord.exercise.sets)
+          ? previousRecord.exercise.sets[setIndex] : null;
         return {
-          weight: normalizeValue(savedSet && savedSet.weight),
-          reps: normalizeValue(savedSet && savedSet.reps) || fallbackReps,
+          weight: normalizeValue(savedSet && savedSet.weight) || normalizeValue(targetWeight),
+          reps: normalizeValue(savedSet && savedSet.reps) || normalizeValue(targetReps) || fallbackReps,
+          weightHint: previousSet && normalizeValue(previousSet.weight) ? normalizeValue(previousSet.weight) : '',
           done: !!(savedSet && savedSet.done),
-          weightOptions: util.buildWeightOptions(referenceWeight),
+          previousSetLabel: this.getPreviousSetLabel(previousRecord, setIndex),
+          weightOptions: buildSetWeightOptions(savedExercise && savedExercise.sets, previousRecord, setIndex),
           weightInputMode: savedSet && savedSet.weightInputMode ? savedSet.weightInputMode : 'picker',
           repsInputMode: savedSet && savedSet.repsInputMode ? savedSet.repsInputMode : (repsMeta.options.length > 0 ? 'picker' : 'input')
         };
@@ -415,6 +488,7 @@ Page({
 
       return {
         id: exercisePlan.id,
+        ...(exercisePlan.libraryId ? { libraryId: exercisePlan.libraryId } : {}),
         name: exercisePlan.name,
         targetPart: exercisePlan.targetPart || '',
         planSets: weekPlan.sets,
@@ -423,9 +497,16 @@ Page({
         guide: exercisePlan.guide || null,
         repsOptions: repsMeta.options,
         previousDate: previousRecord ? previousRecord.date : '',
+        previousDateLabel: previousRecord ? util.formatDateCN(previousRecord.date) : '',
         previousSummary: buildPreviousSummary(previousRecord),
+        previousBestLabel: previousBest ? setLabel(previousBest) : '',
+        image: ui.equipmentImage(exercisePlan.name),
+        gif: (ui.exerciseMedia(exercisePlan) || {}).gif || '',
+        thumb: (ui.exerciseMedia(exercisePlan) || {}).thumb || '',
+        repsLabel: `${weekPlan.sets} 组 × ${String(weekPlan.reps).replace(/\s*-\s*/, '–')} 次`,
         overloadSuggestion,
         sets,
+        activeSetIndex: sets.findIndex(set => !set.done),
         completed: savedExercise
           ? !!savedExercise.completed || (sets.length > 0 && sets.every(set => set.done))
           : false
@@ -433,10 +514,15 @@ Page({
     });
 
     this.effectiveWeek = effectiveWeek;
-    this.clearRestTimer();
+    this.sessionStartedAt = matchedRecord && matchedRecord.startedAt ? matchedRecord.startedAt : '';
+    this.resetRestTimerState();
+    this.applyStatusBar(true);
+    const firstOpen = exercises.findIndex(item => !item.completed);
 
     this.setData({
       isRestDay: false,
+      currentExIndex: firstOpen >= 0 ? firstOpen : Math.max(0, exercises.length - 1),
+      targetView: null,
       currentDayInfo: getDefaultRestDayInfo(),
       restForm: getDefaultRestForm(),
       exercises,
@@ -458,6 +544,7 @@ Page({
     if (!record) {
       return null;
     }
+    if (record.planId && this.currentPlan && record.planId !== this.currentPlan.id) return null;
 
     return util.getRecordDayId(record) === dayId ? record : null;
   },
@@ -489,11 +576,13 @@ Page({
     return {
       completedCount,
       progressPercent: total > 0 ? Math.round((completedCount / total) * 100) : 0,
-      sessionProgressText: `${completedCount} / ${total}`
+      sessionProgressText: `${completedCount} / ${total}`,
+      activeExerciseId: ((exercises || []).find(item => (item.sets || []).some(set => !set.done)) || {}).id || ''
     };
   },
 
   commitExercises(exercises) {
+    exercises = exercises.map(exercise => ({ ...exercise, activeSetIndex: exercise.sets.findIndex(set => !set.done) }));
     this.setData({
       exercises,
       ...this.getProgressData(exercises)
@@ -503,7 +592,11 @@ Page({
   onWeightInput(e) {
     const { exIndex, setIndex } = e.currentTarget.dataset;
     const exercises = this.cloneExercises(this.data.exercises);
-    exercises[exIndex].sets[setIndex].weight = e.detail.value;
+    const exercise = exercises[exIndex];
+    const targetSet = exercise.sets[setIndex];
+
+    targetSet.weight = e.detail.value;
+    targetSet.weightOptions = util.buildWeightOptions(targetSet.weight);
     this.commitExercises(exercises);
   },
 
@@ -517,6 +610,7 @@ Page({
     const nextValue = options[Number(e.detail.value)] || '';
 
     exercise.sets[setIndex].weight = nextValue;
+    exercise.sets[setIndex].weightOptions = util.buildWeightOptions(nextValue);
     this.commitExercises(exercises);
   },
 
@@ -563,11 +657,15 @@ Page({
     const targetSet = exercise.sets[setIndex];
 
     targetSet.done = !targetSet.done;
+    if (targetSet.done && !this.sessionStartedAt) this.sessionStartedAt = new Date().toISOString();
     exercise.completed = exercise.sets.length > 0 && exercise.sets.every(set => set.done);
     this.commitExercises(exercises);
+    this.autoSave();
 
-    if (targetSet.done) {
-      this.startRestTimer(exercise.name);
+    if (targetSet.done && Number(setIndex) < exercise.sets.length - 1 && !this.data.isRestDay) {
+      this.startRestTimer(exercise.name, Number(exIndex), Number(setIndex));
+    } else if (targetSet.done && exercise.completed && !this.data.isRestDay) {
+      this.openTargetView(Number(exIndex));
     }
   },
 
@@ -636,6 +734,10 @@ Page({
   openGuide(e) {
     const index = Number(e.currentTarget.dataset.index);
     const exercise = this.data.exercises[index];
+    if (exercise && exercise.libraryId) {
+      wx.navigateTo({ url: `/packageExercise/pages/detail/detail?id=${exercise.libraryId}` });
+      return;
+    }
     const guide = exercise && exercise.guide ? exercise.guide : {};
 
     this.setData({
@@ -680,43 +782,126 @@ Page({
     });
   },
 
-  startRestTimer(exerciseName) {
+  startRestTimer(exerciseName, exIndex, setIndex) {
+    if (this.data.isRestDay) return;
+    const restExercise = this.data.exercises[exIndex];
+    const nextSet = restExercise && restExercise.sets[setIndex + 1];
+    const restMeta = restExercise ? {
+      restCaption: `${restExercise.name} · 第 ${setIndex + 1} / ${restExercise.sets.length} 组已完成`,
+      restCaptionDone: setIndex + 1,
+      restNext: nextSet ? {
+        name: restExercise.name,
+        image: restExercise.thumb || restExercise.image,
+        isMedia: !!restExercise.thumb,
+        label: `${nextSet.weight ? formatWeight(nextSet.weight) + ' kg' : '自重'} × ${nextSet.reps || '-'} 次`
+      } : null
+    } : {};
     this.clearRestTimer();
+    this.clearRestDismissTimer();
+    this.restFinishedAt = null;
     this.setCustomTabBarHidden(true);
 
-    let seconds = REST_DURATION_SECONDS;
+    const seconds = this.defaultRestSec || REST_DURATION_SECONDS;
+    this.activeRestTimer = restTimer.createTimer(seconds, Date.now());
     this.setData({
       restTimerVisible: true,
+      restTimerFinished: false,
       restTimerSeconds: seconds,
       restTimerLabel: formatTimerLabel(seconds),
-      restTimerExerciseName: exerciseName || '当前动作'
+      restTimerExerciseName: exerciseName || '当前动作',
+      restProgress: 1,
+      ...restMeta
     });
 
-    this.restTimerId = setInterval(() => {
-      seconds -= 1;
-      if (seconds <= 0) {
-        this.clearRestTimer();
-        this.setData({
-          restTimerVisible: false,
-          restTimerSeconds: 0,
-          restTimerLabel: '00:00'
-        });
-        wx.showToast({
-          title: '休息结束',
-          icon: 'none'
-        });
-        return;
-      }
+    this.resumeRestTimer();
+  },
 
-      this.setData({
-        restTimerSeconds: seconds,
-        restTimerLabel: formatTimerLabel(seconds)
-      });
-    }, 1000);
+  getPreviousSetLabel(previousRecord, index) {
+    const previous = previousRecord && previousRecord.exercise && previousRecord.exercise.sets;
+    const set = Array.isArray(previous) ? previous[index] : null;
+    if (!set || normalizeValue(set.reps).trim() === '') return '';
+    const weight = normalizeValue(set.weight).trim();
+    return `上次 ${weight === '' || Number(weight) === 0 ? '自重' : weight + 'kg'} × ${set.reps}`;
+  },
+
+  setRestKeepScreenOn(keepScreenOn) {
+    if (typeof wx.setKeepScreenOn === 'function') wx.setKeepScreenOn({ keepScreenOn });
+  },
+
+  resumeRestTimer() {
+    this.clearRestTimer();
+    if (!this.activeRestTimer || this.data.isRestDay) return;
+    this.setCustomTabBarHidden(true);
+    if (this.restFinishedAt !== null && this.restFinishedAt !== undefined) {
+      this.scheduleRestDismiss();
+      return;
+    }
+    this.tickRestTimer();
+    if (!this.data.restTimerFinished && this.activeRestTimer) {
+      this.setRestKeepScreenOn(true);
+      this.restTimerId = setInterval(() => this.tickRestTimer(), 1000);
+    }
+  },
+
+  tickRestTimer() {
+    const seconds = restTimer.getRemaining(this.activeRestTimer, Date.now());
+    if (seconds === 0) {
+      this.finishRestTimer();
+      return;
+    }
+    // Do not resend exercises or other page state every second.
+    const total = this.activeRestTimer && this.activeRestTimer.durationSec ? this.activeRestTimer.durationSec : (this.defaultRestSec || REST_DURATION_SECONDS);
+    this.setData({ restTimerLabel: formatTimerLabel(seconds), restProgress: Math.max(0, Math.min(1, seconds / total)) });
+  },
+
+  finishRestTimer() {
+    if (this.data.restTimerFinished || !this.activeRestTimer) return;
+    this.clearRestTimer();
+    this.setRestKeepScreenOn(false);
+    this.restFinishedAt = Date.now();
+    this.setData({ restTimerFinished: true, restTimerLabel: '休息结束 · 开始下一组', restProgress: 0 });
+    if (typeof wx.vibrateLong === 'function') wx.vibrateLong();
+    this.scheduleRestDismiss();
+  },
+
+  scheduleRestDismiss() {
+    this.clearRestDismissTimer();
+    const delay = Math.max(0, 3000 - (Date.now() - this.restFinishedAt));
+    if (!delay) this.resetRestTimerState();
+    else this.restDismissTimerId = setTimeout(() => this.resetRestTimerState(), delay);
+  },
+
+  clearRestDismissTimer() {
+    if (this.restDismissTimerId !== undefined && this.restDismissTimerId !== null) {
+      clearTimeout(this.restDismissTimerId);
+      this.restDismissTimerId = null;
+    }
+  },
+
+  adjustRestTimer(e) {
+    if (!this.activeRestTimer || this.data.restTimerFinished) return;
+    const delta = Number(e.currentTarget.dataset.delta);
+    if (delta !== -15 && delta !== 15) return;
+    this.activeRestTimer = restTimer.adjust(this.activeRestTimer, delta, Date.now());
+    this.tickRestTimer();
+  },
+
+  chooseRestPreset() {
+    wx.showActionSheet({
+      itemList: restTimer.REST_PRESETS.map(seconds => `${seconds} 秒`),
+      success: result => {
+        const seconds = restTimer.REST_PRESETS[result.tapIndex];
+        if (!seconds) return;
+        this.defaultRestSec = seconds;
+        wx.setStorageSync('rest_timer_default_sec', seconds);
+        this.setData({ restDefaultSec: seconds });
+        if (this.data.restTimerVisible && !this.data.restTimerFinished) this.restartRestTimer();
+      }
+    });
   },
 
   clearRestTimer() {
-    if (this.restTimerId) {
+    if (this.restTimerId !== undefined && this.restTimerId !== null) {
       clearInterval(this.restTimerId);
       this.restTimerId = null;
     }
@@ -724,7 +909,11 @@ Page({
 
   resetRestTimerState() {
     this.clearRestTimer();
-    this.setCustomTabBarHidden(false);
+    this.clearRestDismissTimer();
+    this.activeRestTimer = null;
+    this.restFinishedAt = null;
+    this.setRestKeepScreenOn(false);
+    this.setCustomTabBarHidden(!!this.data.guideVisible);
     this.setData(getDefaultRestTimerData());
   },
 
@@ -737,12 +926,19 @@ Page({
   },
 
   restartRestTimer() {
-    this.startRestTimer(this.data.restTimerExerciseName || '当前动作');
+    this.clearRestTimer();
+    this.clearRestDismissTimer();
+    this.restFinishedAt = null;
+    const seconds = this.defaultRestSec || REST_DURATION_SECONDS;
+    this.activeRestTimer = restTimer.createTimer(seconds, Date.now());
+    this.setData({ restTimerVisible: true, restTimerFinished: false, restTimerSeconds: seconds, restTimerLabel: formatTimerLabel(seconds), restProgress: 1 });
+    this.resumeRestTimer();
   },
 
   serializeExercises(exercises) {
     return (exercises || []).map(exercise => ({
       id: exercise.id,
+      ...(exercise.libraryId ? { libraryId: exercise.libraryId } : {}),
       name: exercise.name,
       targetPart: exercise.targetPart,
       planSets: exercise.planSets,
@@ -757,7 +953,7 @@ Page({
     }));
   },
 
-  saveRecord() {
+  saveRecord(confirmedReplacement) {
     const { exercises, selectedDayIndex, todayStr, isRestDay: isRestDayMode, restForm } = this.data;
     const plan = this.currentPlan || app.getActiveTrainingPlan();
     const effectiveWeek = this.effectiveWeek || VISIBLE_WEEK;
@@ -771,6 +967,20 @@ Page({
     }
 
     const day = plan.days[selectedDayIndex];
+    const priorToday = util.getTrainingRecord(todayStr);
+    if (confirmedReplacement !== true && priorToday
+      && (util.getRecordDayId(priorToday) !== day.id || (priorToday.planId && priorToday.planId !== plan.id))) {
+      if (this._saveConfirmation) return;
+      this._saveConfirmation = true;
+      wx.showModal({
+        title: '替换今日记录？',
+        content: `今天已保存“${priorToday.dayName || '训练'}”。每天保留一份记录，继续保存会替换它。`,
+        confirmText: '替换保存',
+        success: result => { this._saveConfirmation = false; if (result.confirm) this.saveRecord(true); },
+        fail: () => { this._saveConfirmation = false; }
+      });
+      return;
+    }
 
     if (isRestDayMode) {
       const record = createRestRecord(day, plan, todayStr, restForm);
@@ -791,25 +1001,17 @@ Page({
       return;
     }
 
-    const record = {
-      date: todayStr,
-      planId: plan.id,
-      planName: plan.title,
-      planTitle: plan.title,
-      dayId: day.id,
-      dayType: day.id,
-      dayName: day.name,
-      dayColor: day.color,
-      week: effectiveWeek,
-      exercises: this.serializeExercises(exercises),
-      completionRate: this.data.progressPercent,
-      savedAt: new Date().toISOString()
-    };
+    const record = this.buildTrainingRecord(plan, day, effectiveWeek);
 
+    // 对比“打开页面时”的当天记录（自动保存不算），同样的成绩再次保存不会重复提示新纪录。
+    const priorRecords = this.getPriorRecords();
+    const newRecords = record.exercises.flatMap(exercise => progression.detectNewRecords(exercise,
+      progression.findPersonalRecords(priorRecords, exercise.libraryId || exercise.id, record.exercises)));
     util.saveTrainingRecord(todayStr, record);
+    this._baselineToday = record;
 
     wx.showToast({
-      title: '保存成功',
+      title: newRecords.length ? '新纪录 🎉' : '保存成功',
       icon: 'success',
       duration: 1500
     });
@@ -819,6 +1021,248 @@ Page({
       sessionStatusText: '已保存记录'
     });
     wx.vibrateShort({ type: 'medium' });
+  },
+
+  adoptSuggestion(e) {
+    const index = Number(e.currentTarget.dataset.index);
+    const exercise = this.data.exercises[index];
+    const suggestion = exercise && exercise.overloadSuggestion;
+    if (!suggestion || !suggestion.show) return;
+    const exercises = this.cloneExercises(this.data.exercises);
+    exercises[index].sets = exercises[index].sets.map((set, setIndex) => set.done ? set : ({
+      ...set,
+      weight: String(suggestion.weights[setIndex] === undefined ? suggestion.weight : suggestion.weights[setIndex]),
+      reps: String(suggestion.repsBySet[setIndex] === undefined ? suggestion.reps : suggestion.repsBySet[setIndex]),
+      weightInputMode: 'input', repsInputMode: 'input'
+    }));
+    this.commitExercises(exercises);
+    wx.showToast({ title: '已填入未完成组', icon: 'success' });
+  },
+
+  buildTrainingRecord(plan, day, week) {
+    return {
+      date: this.data.todayStr,
+      planId: plan.id,
+      planName: plan.title,
+      planTitle: plan.title,
+      dayId: day.id,
+      dayType: day.id,
+      dayName: day.name,
+      dayColor: day.color,
+      week: week || this.effectiveWeek || VISIBLE_WEEK,
+      exercises: this.serializeExercises(this.data.exercises),
+      completionRate: this.data.progressPercent,
+      ...this.getDurationFields(),
+      savedAt: new Date().toISOString()
+    };
+  },
+
+  getPriorRecords() {
+    const today = this.data.todayStr;
+    return util.getTrainingDates()
+      .filter(date => date !== today)
+      .map(date => util.getTrainingRecord(date))
+      .filter(Boolean)
+      .concat(this._baselineToday ? [this._baselineToday] : []);
+  },
+
+  getDurationFields() {
+    if (!this.sessionStartedAt) return {};
+    const finishedAt = new Date().toISOString();
+    const minutes = Math.max(1, Math.round((new Date(finishedAt) - new Date(this.sessionStartedAt)) / 60000));
+    return { startedAt: this.sessionStartedAt, finishedAt, durationMin: minutes };
+  },
+
+  // 每完成一组就静默保存；当天已有其他训练日的记录时不覆盖，等用户结束训练时再确认替换
+  autoSave() {
+    const { selectedDayIndex, todayStr, isRestDay: restMode } = this.data;
+    const plan = this.currentPlan || app.getActiveTrainingPlan();
+    if (restMode || selectedDayIndex < 0 || !plan || !plan.days[selectedDayIndex] || !todayStr) return;
+    const day = plan.days[selectedDayIndex];
+    const prior = util.getTrainingRecord(todayStr);
+    if (prior && (util.getRecordDayId(prior) !== day.id || (prior.planId && prior.planId !== plan.id))) return;
+    util.saveTrainingRecord(todayStr, this.buildTrainingRecord(plan, day));
+    this.setData({ hasExistingRecord: true });
+  },
+
+  applyStatusBar(dark) {
+    if (typeof wx.setNavigationBarColor !== 'function') return;
+    wx.setNavigationBarColor({
+      frontColor: dark ? '#ffffff' : '#000000',
+      backgroundColor: dark ? '#0E1416' : '#F6F4EE',
+      fail() {}
+    });
+  },
+
+  // ---------- 单个动作视图 ----------
+  stepValue(e) {
+    const { exIndex, setIndex, field, delta } = e.currentTarget.dataset;
+    const exercises = this.cloneExercises(this.data.exercises);
+    const exercise = exercises[exIndex];
+    const set = exercise && exercise.sets[setIndex];
+    if (!set) return;
+    const step = Number(delta) * (field === 'weight' ? WEIGHT_STEP : REPS_STEP);
+    const fallback = field === 'weight'
+      ? Number(set.weightHint) || Number(setIndex > 0 && exercise.sets[setIndex - 1].weight) || 0
+      : Number(setIndex > 0 && exercise.sets[setIndex - 1].reps) || 0;
+    const current = set[field] === '' ? fallback : Number(set[field]) || 0;
+    const next = Math.max(0, current + (set[field] === '' && fallback ? 0 : step));
+    set[field] = field === 'weight' ? formatWeight(next) : String(Math.round(next));
+    if (field === 'weight') set.weightInputMode = 'input';
+    else set.repsInputMode = 'input';
+    this.commitExercises(exercises);
+  },
+
+  completeCurrentSet() {
+    const exIndex = this.data.currentExIndex;
+    const exercise = this.data.exercises[exIndex];
+    if (!exercise) return;
+    const setIndex = exercise.sets.findIndex(set => !set.done);
+    if (setIndex < 0) {
+      this.goNextExercise();
+      return;
+    }
+    const set = exercise.sets[setIndex];
+    if (String(set.reps).trim() === '') {
+      wx.showToast({ title: '先填写这一组的次数', icon: 'none' });
+      return;
+    }
+    this.toggleSetDone({ currentTarget: { dataset: { exIndex, setIndex } } });
+  },
+
+  goNextExercise() {
+    const exercises = this.data.exercises;
+    const after = exercises.findIndex((item, index) => index > this.data.currentExIndex && !item.completed);
+    const anyOpen = after >= 0 ? after : exercises.findIndex(item => !item.completed);
+    if (anyOpen < 0) {
+      this.finishWorkout();
+      return;
+    }
+    this.setData({ currentExIndex: anyOpen });
+  },
+
+  chooseExercise() {
+    const exercises = this.data.exercises;
+    if (exercises.length < 2) return;
+    wx.showActionSheet({
+      itemList: exercises.map((item, index) => `${index + 1}. ${item.name}${item.completed ? ' ✓' : ''}`).slice(0, 6),
+      success: result => this.setData({ currentExIndex: result.tapIndex })
+    });
+  },
+
+  openCurrentGuide() {
+    this.openGuide({ currentTarget: { dataset: { index: this.data.currentExIndex } } });
+  },
+
+  copyCurrentLast() {
+    this.copyLastWeight({ currentTarget: { dataset: { index: this.data.currentExIndex } } });
+  },
+
+  // ---------- 组间休息 ----------
+  pickRestPreset(e) {
+    const seconds = Number(e.currentTarget.dataset.seconds);
+    if (!restTimer.REST_PRESETS.includes(seconds)) return;
+    this.defaultRestSec = seconds;
+    this.setData({ restDefaultSec: seconds });
+    if (this.data.restTimerVisible) this.restartRestTimer();
+  },
+
+  saveRestPreset(e) {
+    const seconds = Number(e.currentTarget.dataset.seconds);
+    if (!restTimer.REST_PRESETS.includes(seconds)) return;
+    this.defaultRestSec = seconds;
+    wx.setStorageSync('rest_timer_default_sec', seconds);
+    this.setData({ restDefaultSec: seconds });
+    wx.showToast({ title: `默认休息 ${seconds} 秒`, icon: 'none' });
+  },
+
+  // ---------- 下一组目标（一个动作做完后） ----------
+  openTargetView(exIndex) {
+    const exercise = this.data.exercises[exIndex];
+    if (!exercise) return;
+    const previous = this.data.previousExerciseMap[exercise.id];
+    const thisSession = { date: this.data.todayStr, exercise: this.serializeExercises([exercise])[0] };
+    const history = [thisSession].concat(previous ? [previous] : []);
+    const suggestion = progression.suggestNextTarget({ planReps: exercise.planReps, planSets: exercise.planSets, history });
+    const best = bestSetOf(exercise, true);
+    const previousBest = bestSetOf(previous && previous.exercise);
+    const priorPRs = progression.findPersonalRecords(this.getPriorRecords(), exercise.libraryId || exercise.id, [exercise]);
+    const prs = progression.detectNewRecords(thisSession.exercise, priorPRs);
+    const weightPR = prs.find(item => item.type === 'bestWeight');
+    const hasWeight = suggestion.type !== 'none' && suggestion.weight !== null && suggestion.weight !== undefined;
+
+    this.clearRestTimer();
+    this.setData({
+      targetView: {
+        exIndex,
+        name: exercise.name,
+        repsLabel: exercise.repsLabel,
+        image: exercise.thumb || exercise.image,
+        isMedia: !!exercise.thumb,
+        previous: previousBest ? { label: setLabel(previousBest), weight: formatWeight(previousBest.weight), reps: previousBest.reps, date: dotDate(previous.date) } : null,
+        current: best ? { weight: formatWeight(best.weight), reps: best.reps, isBodyweight: !best.weight, date: dotDate(this.data.todayStr) } : null,
+        suggestion: {
+          show: hasWeight,
+          weight: hasWeight ? formatWeight(suggestion.weight) : '',
+          isBodyweight: hasWeight && !Number(suggestion.weight),
+          reps: String(exercise.planReps).replace(/\s*-\s*/, '-'),
+          message: suggestion.message || ''
+        },
+        weights: suggestion.weights || [],
+        repsBySet: suggestion.repsBySet || [],
+        pr: weightPR ? {
+          gain: priorPRs.bestWeight ? formatWeight(weightPR.weight - priorPRs.bestWeight.weight) : '',
+          weight: formatWeight(weightPR.weight)
+        } : null
+      }
+    });
+  },
+
+  adoptNextTarget() {
+    const view = this.data.targetView;
+    if (!view) return;
+    const exercise = this.data.exercises[view.exIndex];
+    if (view.suggestion.show && exercise) {
+      nextTarget.saveNextTarget(exercise.libraryId || exercise.id, { weights: view.weights, repsBySet: view.repsBySet, source: 'suggestion' });
+      wx.showToast({ title: '下次将按建议预填', icon: 'none' });
+    }
+    this.closeTargetView();
+  },
+
+  keepCurrentTarget() {
+    const view = this.data.targetView;
+    const exercise = view ? this.data.exercises[view.exIndex] : null;
+    if (exercise) {
+      nextTarget.saveNextTarget(exercise.libraryId || exercise.id, {
+        weights: exercise.sets.map(set => set.weight),
+        repsBySet: exercise.sets.map(set => set.reps),
+        source: 'keep'
+      });
+    }
+    this.closeTargetView();
+  },
+
+  closeTargetView() {
+    this.setData({ targetView: null });
+    this.goNextExercise();
+  },
+
+  dismissTargetView() {
+    this.setData({ targetView: null });
+  },
+
+  finishWorkout() {
+    if (this.data.isRestDay) return;
+    this.saveRecord();
+    const saved = util.getTrainingRecord(this.data.todayStr);
+    if (saved && saved.dayId === (this.currentPlan && this.currentPlan.days[this.data.selectedDayIndex] || {}).id) {
+      setTimeout(() => wx.redirectTo({ url: `/pages/history/day?date=${this.data.todayStr}` }), 900);
+    }
+  },
+
+  onExerciseMediaError(e) {
+    const index = Number(e.currentTarget.dataset.index);
+    if (this.data.exercises[index]) this.setData({ [`exercises[${index}].gif`]: '' });
   },
 
   noop() {}

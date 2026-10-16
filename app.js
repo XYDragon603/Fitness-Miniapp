@@ -1,9 +1,15 @@
 const workoutPlan = require('./utils/workout-plan.js');
+const cloudBackup = require('./utils/cloud-backup.js');
 
 App({
   onLaunch() {
     this.initCloud();
     this.refreshTrainingPlanState();
+  },
+
+  // 离开小程序时：数据有变化且距上次超过 6 小时，静默备份到云端
+  onHide() {
+    cloudBackup.autoBackup();
   },
 
   globalData: {

@@ -1,4 +1,6 @@
 const { sanitizeGuideUrl } = require('./mvp-core.js');
+const schedule = require('./schedule.js');
+const PLAN_SCHEDULES_KEY = 'training_plan_schedules';
 
 const WORKOUT_PLANS_KEY = 'workout_plans';
 const ACTIVE_PLAN_ID_KEY = 'active_plan_id';
@@ -193,6 +195,89 @@ function buildDefaultPlan() {
   };
 }
 
+function buildHealthyFatLossPlan() {
+  return {
+    id: 'builtin_healthy_fat_loss',
+    type: 'builtin',
+    title: '\u5065\u5eb7\u51cf\u8102\u8ba1\u5212',
+    notice: '\u4ee5\u89c4\u5f8b\u529b\u91cf\u8bad\u7ec3\u3001\u8f7b\u6d3b\u52a8\u548c\u6062\u590d\u8282\u594f\u4e3a\u4e3b\uff0c\u5e2e\u52a9\u4f60\u7528\u66f4\u7a33\u5b9a\u3001\u66f4\u8f7b\u677e\u7684\u65b9\u5f0f\u79ef\u7d2f\u957f\u671f\u8bb0\u5f55\u3002',
+    days: [
+      {
+        id: 'fatloss_day1',
+        type: 'training',
+        name: '\u529b\u91cf\u8bad\u7ec3 A',
+        icon: '\ud83c\udfcb\ufe0f',
+        color: '#C96565',
+        exercises: [
+          createExercise('fatloss_day1_ex1', '\u9ad8\u811a\u676f\u6df1\u8e72', '\u817f\u90e8 / \u81c0\u90e8', 4, '10-12', '\u5148\u4ee5\u52a8\u4f5c\u7a33\u5b9a\u4e3a\u4f18\u5148\uff0c\u80fd\u4ece\u5bb9\u5b8c\u6210\u5c31\u5f88\u597d\u3002'),
+          createExercise('fatloss_day1_ex2', '\u4fef\u5367\u6491', '\u80f8\u90e8 / \u4e09\u5934', 4, '8-12', '\u6309\u81ea\u5df1\u53ef\u63a7\u7684\u5f3a\u5ea6\u5b8c\u6210\uff0c\u7559\u4e00\u70b9\u4f59\u529b\u4e5f\u53ef\u4ee5\u3002'),
+          createExercise('fatloss_day1_ex3', '\u5750\u59ff\u5212\u8239', '\u80cc\u90e8', 4, '10-12', '\u4fdd\u6301\u8282\u594f\u7a33\u5b9a\uff0c\u5148\u5bfb\u627e\u80cc\u90e8\u53d1\u529b\u611f\u3002')
+        ]
+      },
+      createRestDay({
+        id: 'fatloss_day2',
+        name: '\u8f7b\u6709\u6c27 / \u5feb\u8d70',
+        icon: '\ud83d\udeb6',
+        color: '#5F9A88',
+        focus: '\u8f7b\u6d3b\u52a8',
+        description: '\u4eca\u5929\u53ef\u4ee5\u4ee5\u8f7b\u6709\u6c27\u3001\u5feb\u8d70\u6216\u8212\u5c55\u6d3b\u52a8\u4e3a\u4e3b\uff0c\u7ed9\u8eab\u4f53\u4e00\u4e2a\u6e29\u548c\u7684\u63a8\u8fdb\u3002',
+        note: '\u4fdd\u6301\u8282\u594f\u5c31\u5f88\u68d2\uff0c\u80fd\u6301\u7eed\u8bb0\u5f55\u6bd4\u4e00\u6b21\u505a\u5f88\u591a\u66f4\u91cd\u8981\u3002'
+      }),
+      {
+        id: 'fatloss_day3',
+        type: 'training',
+        name: '\u529b\u91cf\u8bad\u7ec3 B',
+        icon: '\ud83d\udd25',
+        color: '#4F9CC4',
+        exercises: [
+          createExercise('fatloss_day3_ex1', '\u54d1\u94c3\u7f57\u9a6c\u5c3c\u4e9a\u786c\u62c9', '\u81c0\u90e8 / \u540e\u94fe', 4, '10-12', '\u4f18\u5148\u611f\u53d7\u81c0\u817f\u540e\u4fa7\u53d1\u529b\uff0c\u4e0d\u7528\u6025\u7740\u52a0\u91cd\u91cf\u3002'),
+          createExercise('fatloss_day3_ex2', '\u54d1\u94c3\u4e0a\u659c\u5367\u63a8', '\u4e0a\u80f8', 4, '10-12', '\u52a8\u4f5c\u7a33\u5b9a\u4f18\u5148\uff0c\u4fdd\u6301\u8212\u9002\u7684\u63a8\u4e3e\u8def\u7ebf\u3002'),
+          createExercise('fatloss_day3_ex3', '\u9ad8\u4f4d\u4e0b\u62c9', '\u80cc\u90e8', 4, '10-12', '\u4fdd\u6301\u5b8c\u6574\u884c\u7a0b\uff0c\u6bcf\u6b21\u90fd\u7a33\u7a33\u5b8c\u6210\u3002')
+        ]
+      },
+      createRestDay({
+        id: 'fatloss_day4',
+        name: '\u4f11\u606f / \u62c9\u4f38',
+        icon: '\ud83e\uddd8',
+        color: '#5F9A88',
+        focus: '\u6062\u590d',
+        description: '\u4eca\u5929\u53ef\u4ee5\u8f7b\u677e\u62c9\u4f38\u3001\u6563\u6b65\uff0c\u6216\u8005\u5b89\u6392\u5b8c\u6574\u4f11\u606f\uff0c\u8ba9\u8eab\u4f53\u6162\u6162\u7f13\u8fc7\u6765\u3002',
+        note: '\u597d\u597d\u6062\u590d\u4e5f\u662f\u8ba1\u5212\u7684\u4e00\u90e8\u5206\uff0c\u8fd9\u4f1a\u5e2e\u4f60\u66f4\u7a33\u5b9a\u5730\u8d70\u4e0b\u53bb\u3002'
+      }),
+      {
+        id: 'fatloss_day5',
+        type: 'training',
+        name: '\u529b\u91cf\u8bad\u7ec3 C',
+        icon: '\ud83d\udcaa',
+        color: '#4EAE7D',
+        exercises: [
+          createExercise('fatloss_day5_ex1', '\u4fdd\u52a0\u5229\u4e9a\u5206\u817f\u8e72', '\u817f\u90e8 / \u81c0\u90e8', 3, '10-12', '\u5148\u6c42\u7a33\u518d\u6162\u6162\u63d0\u5347\uff0c\u5de6\u53f3\u4fa7\u90fd\u7ed9\u81ea\u5df1\u4e00\u70b9\u9002\u5e94\u65f6\u95f4\u3002'),
+          createExercise('fatloss_day5_ex2', '\u54d1\u94c3\u80a9\u63a8', '\u80a9\u90e8', 3, '10-12', '\u4fdd\u6301\u80a9\u80db\u7a33\u5b9a\uff0c\u4e0d\u8ffd\u6c42\u51b2\u523a\u5f0f\u7684\u5b8c\u6210\u611f\u3002'),
+          createExercise('fatloss_day5_ex3', '\u9762\u62c9', '\u540e\u675f / \u4e0a\u80cc', 3, '12-15', '\u7528\u8f7b\u91cd\u91cf\u914d\u5408\u6162\u8282\u594f\uff0c\u628a\u52a8\u4f5c\u505a\u5f97\u8212\u5c55\u5c31\u5f88\u597d\u3002')
+        ]
+      },
+      createRestDay({
+        id: 'fatloss_day6',
+        name: '\u8f7b\u6d3b\u52a8',
+        icon: '\ud83c\udf3f',
+        color: '#6CA78F',
+        focus: '\u6d3b\u52a8',
+        description: '\u4eca\u5929\u53ef\u4ee5\u5b89\u6392\u8f7b\u677e\u6563\u6b65\u3001\u8212\u5c55\u6216\u6e29\u548c\u6d3b\u52a8\uff0c\u8ba9\u8eab\u4f53\u4fdd\u6301\u6d41\u52a8\u611f\u3002',
+        note: '\u628a\u6d3b\u52a8\u53d8\u6210\u4e60\u60ef\uff0c\u4f1a\u6bd4\u5076\u5c14\u7279\u522b\u62fc\u66f4\u5bb9\u6613\u957f\u671f\u575a\u6301\u3002'
+      }),
+      createRestDay({
+        id: 'fatloss_day7',
+        name: '\u4f11\u606f\u65e5',
+        icon: '\ud83d\udccc',
+        color: '#5F9A88',
+        focus: '\u6062\u590d',
+        description: '\u4eca\u5929\u4ee5\u6062\u590d\u8282\u594f\u4e3a\u4e3b\uff0c\u7ed9\u81ea\u5df1\u4e00\u4e2a\u8f83\u4ece\u5bb9\u7684\u6536\u5c3e\u3002',
+        note: '\u8bb0\u5f55\u4f11\u606f\u65e5\u4e5f\u5f88\u6709\u4ef7\u503c\uff0c\u80fd\u5e2e\u4f60\u66f4\u6e05\u695a\u5730\u770b\u5230\u6574\u4f53\u8282\u594f\u3002'
+      })
+    ]
+  };
+}
+
 function normalizeGuide(guide) {
   return createGuide(guide || {});
 }
@@ -204,6 +289,7 @@ function normalizeExercise(exercise, exerciseIndex) {
 
   return {
     id: exercise && exercise.id ? exercise.id : `exercise_${exerciseIndex + 1}`,
+    ...(exercise && typeof exercise.libraryId === 'string' && /^\d{4}$/.test(exercise.libraryId) ? { libraryId: exercise.libraryId } : {}),
     name: exercise && exercise.name ? exercise.name : `动作 ${exerciseIndex + 1}`,
     targetPart: exercise && exercise.targetPart ? exercise.targetPart : '',
     weeks: {
@@ -256,7 +342,7 @@ function normalizePlan(plan, planIndex) {
 }
 
 function getBuiltinPlans() {
-  return [buildDefaultPlan()];
+  return [buildDefaultPlan(), buildHealthyFatLossPlan()];
 }
 
 function saveWorkoutPlans(plans) {
@@ -287,7 +373,9 @@ function ensureWorkoutPlanState() {
   const builtinPlans = getBuiltinPlans();
   const storedPlans = getWorkoutPlans();
   const customPlans = storedPlans.filter(plan => plan.type === 'custom');
-  const plans = builtinPlans.concat(customPlans);
+  const schedules = wx.getStorageSync(PLAN_SCHEDULES_KEY) || {};
+  const plans = builtinPlans.concat(customPlans).map(plan => ({ ...plan,
+    ...(schedules[plan.id] ? { schedule: schedule.normalize(schedules[plan.id], plan.days) } : {}) }));
   const activePlanId = getActivePlanId();
   const resolvedActivePlanId = plans.some(plan => plan.id === activePlanId)
     ? activePlanId
@@ -299,7 +387,7 @@ function ensureWorkoutPlanState() {
   return {
     plans,
     activePlanId: resolvedActivePlanId,
-    activePlan: clone(plans.find(plan => plan.id === resolvedActivePlanId))
+    activePlan: clone(schedule.withRestDay(plans.find(plan => plan.id === resolvedActivePlanId)))
   };
 }
 
@@ -330,19 +418,36 @@ function upsertCustomPlan(plan) {
   return nextPlan;
 }
 
+function savePlanSchedule(planId, value) {
+  const plan = getPlanById(planId);
+  if (!plan) return null;
+  const schedules = wx.getStorageSync(PLAN_SCHEDULES_KEY) || {};
+  const normalized = schedule.normalize(value, plan.days);
+  wx.setStorageSync(PLAN_SCHEDULES_KEY, { ...schedules, [planId]: normalized });
+  return normalized;
+}
+
+function getPlanSchedule(planId) {
+  const plan = getPlanById(planId);
+  return schedule.normalize((wx.getStorageSync(PLAN_SCHEDULES_KEY) || {})[planId], plan && plan.days || []);
+}
+
 module.exports = {
   WORKOUT_PLANS_KEY,
   ACTIVE_PLAN_ID_KEY,
   MAX_CUSTOM_DAYS,
   DEFAULT_REST_DAY_COLOR,
   buildDefaultPlan,
+  buildHealthyFatLossPlan,
   createRestDay,
   ensureWorkoutPlanState,
   getWorkoutPlans,
   getPlanById,
   getActivePlanId,
   normalizePlan,
+  normalizeExercise,
   saveWorkoutPlans,
   setActivePlanId,
   upsertCustomPlan
+  , savePlanSchedule, getPlanSchedule, PLAN_SCHEDULES_KEY
 };

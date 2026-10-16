@@ -1,8 +1,14 @@
 {
   "description": "健身计划记录小程序",
   "packOptions": {
-    "ignore": [],
-    "include": []
+    "ignore": [
+      { "type": "folder", "value": "tools" },
+      { "type": "folder", "value": "tests" },
+      { "type": "folder", "value": "docs" },
+      { "type": "folder", "value": "tmp-downloads" },
+      { "type": "folder", "value": "tmp-skill-build" }
+    ],
+    "include": [{ "type": "file", "value": "packageExercise/data/LICENSE.txt" }]
   },
   "setting": {
     "bundle": false,
@@ -48,7 +54,7 @@
   },
   "compileType": "miniprogram",
   "cloudfunctionRoot": "cloudfunctions/",
-  "libVersion": "3.3.4",
+  "libVersion": "3.16.0",
   "appid": "wx25640957bf9ceb93",
   "projectname": "fitness-plan-tracker",
   "editorSetting": {

@@ -1,0 +1,65 @@
+<nav-bar back />
+<view class="page has-footer fatloss">
+  <view class="hero">
+    <view class="hero-title">健康减脂参考</view>
+    <view class="hero-sub">关注长期趋势与稳定习惯。</view>
+  </view>
+
+  <view class="dark-card fl-target" wx:if="{{target && !target.isMinor}}">
+    <view class="fl-badge"><image class="icon-sm" src="/images/icons/info-grey.svg" />仅供参考</view>
+    <view class="fl-target-row">
+      <view class="fl-target-main">
+        <text class="label-dark">每日参考区间</text>
+        <view class="fl-range num">{{target.min}} - {{target.max}}</view>
+        <text class="fl-unit">kcal</text>
+      </view>
+      <view class="fl-target-side">
+        <text class="label-dark">蛋白质参考</text>
+        <view class="fl-range num">{{target.protein}}<text class="fl-unit"> g</text></view>
+      </view>
+    </view>
+  </view>
+  <view class="dark-card fl-target" wx:elif="{{target && target.isMinor}}">
+    <text class="label-dark">温和记录建议</text>
+    <view class="fl-minor">{{target.note}}</view>
+  </view>
+  <view class="dark-card fl-target" wx:else>
+    <text class="label-dark">还没有参考区间</text>
+    <view class="fl-minor">填写身高、体重和年龄后，生成每日参考热量区间。</view>
+    <view class="lime-btn compact fl-setup" bindtap="openGoalSetup">去填写基本信息</view>
+  </view>
+
+  <view class="weight-link" bindtap="openWeight">
+    <image class="icon-lg" src="/images/icons/trend-ink.svg" />
+    <view class="list-row-body">
+      <view class="list-row-title">体重趋势</view>
+      <view class="list-row-desc">{{latestWeight ? '最近 ' + latestWeight.weight + ' kg · ' + latestWeight.date : '记录今日体重，看长期变化'}}</view>
+    </view>
+    <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
+  </view>
+
+  <view class="section-head">
+    <text class="section-title">今日习惯</text>
+    <text class="section-meta">小小的坚持，带来真实的改变。</text>
+  </view>
+  <view class="list-card">
+    <view class="list-row habit" wx:for="{{habits}}" wx:key="key" bindtap="toggleHabit" data-key="{{item.key}}">
+      <image class="icon-lg" src="/images/icons/{{item.icon}}-ink.svg" />
+      <view class="list-row-body"><view class="list-row-title habit-title">{{item.title}}</view><view class="list-row-desc">{{item.desc}}</view></view>
+      <view class="habit-box {{habitState[item.key] ? 'on' : ''}}"><image wx:if="{{habitState[item.key]}}" class="icon" src="/images/icons/check-ink.svg" /></view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <text class="section-title">本周节奏</text>
+    <text class="section-meta">保持规律，循序渐进。</text>
+  </view>
+  <view class="rhythm">
+    <view class="rhythm-item"><image class="icon-xl" src="/images/icons/bars-lime.svg" /><view><text class="label">本周训练</text><view class="rhythm-value num">{{weeklySummary.trainingCount || 0}}<text class="rhythm-unit"> 次</text></view></view></view>
+    <view class="rhythm-sep"></view>
+    <view class="rhythm-item"><image class="icon-xl" src="/images/icons/sofa-ink.svg" /><view><text class="label">休息</text><view class="rhythm-value num">{{weeklySummary.restDays || 0}}<text class="rhythm-unit"> 天</text></view></view></view>
+  </view>
+</view>
+<view class="footer-bar">
+  <view class="lime-btn" bindtap="saveHabits">保存今日习惯</view>
+</view>

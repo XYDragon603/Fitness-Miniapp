@@ -1,0 +1,32 @@
+<nav-bar back />
+<view class="page backup">
+  <view class="hero">
+    <view class="hero-title">数据备份</view>
+    <view class="hero-sub">训练、饮食、计划和体重都存在手机里，备份到云端后换手机也不会丢。</view>
+  </view>
+
+  <view class="dark-card b-card">
+    <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />
+    <text class="label-dark">云端备份</text>
+    <block wx:if="{{loading}}"><view class="b-state">正在查询…</view></block>
+    <block wx:elif="{{cloud}}">
+      <view class="b-time num">{{cloud.savedAt}}</view>
+      <view class="b-meta num">{{cloud.keyCount}} 项数据 · {{cloud.size}}</view>
+    </block>
+    <block wx:else><view class="b-state">还没有云端备份</view></block>
+  </view>
+
+  <view class="b-error" wx:if="{{error}}"><image class="icon-sm" src="/images/icons/info-grey.svg" />{{error}}</view>
+
+  <view class="list-card b-local">
+    <view class="list-row"><text class="b-label">本机数据</text><text class="b-value num">{{local.keyCount}} 项 · {{local.usedKb}} KB</text></view>
+    <view class="list-row"><text class="b-label">本机上次备份</text><text class="b-value num">{{local.lastBackup || '还没有'}}</text></view>
+  </view>
+
+  <view class="b-actions">
+    <view class="lime-btn {{busy ? 'disabled' : ''}}" bindtap="backup"><image class="icon" src="/images/icons/save-ink.svg" />立即备份</view>
+    <view class="ghost-btn {{busy || !cloud ? 'b-disabled' : ''}}" bindtap="restore">从云端恢复</view>
+  </view>
+
+  <view class="b-note">离开小程序时，如果数据有变化、且距离上次备份超过 6 小时，会自动备份一次。备份只有你自己的微信账号能读取。</view>
+</view>

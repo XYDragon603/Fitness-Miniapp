@@ -1,0 +1,22 @@
+.me-card { padding: 30rpx 24rpx 24rpx; }
+.me-total { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 0 12rpx 20rpx; }
+.me-total-label { font-size: 28rpx; }
+.me-total-value { font-size: 120rpx; line-height: 1.05; font-weight: 800; }
+.me-total-unit { font-size: 50rpx; }
+.me-tiles { display: flex; gap: 16rpx; }
+.me-tile { flex: 1; padding: 22rpx 24rpx; }
+.me-tile-row { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 8rpx; }
+.me-tile-value { font-size: 64rpx; line-height: 1.1; font-weight: 800; }
+.me-tile-unit { font-size: 30rpx; }
+
+.week-chart { display: flex; gap: 12rpx; padding: 8rpx 0 0; border-bottom: 2rpx solid var(--line); margin-bottom: 0; }
+.week-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
+.week-count { font-size: 26rpx; color: var(--text); }
+.week-bar-track { width: 72rpx; height: 120rpx; display: flex; align-items: flex-end; }
+.week-bar { width: 100%; border-radius: 10rpx 10rpx 0 0; background: var(--surface-3); }
+.week-bar.on { background: var(--lime); }
+.week-label { font-size: 24rpx; color: var(--text-2); padding: 10rpx 0 16rpx; }
+.week-label.today { color: var(--text); font-weight: 800; }
+
+.me-links { margin-top: 28rpx; }
+.me-links .list-row { padding: 34rpx 26rpx; gap: 28rpx; }

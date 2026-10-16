@@ -1,0 +1,67 @@
+<nav-bar back />
+<view class="page weight">
+  <view class="hero">
+    <view class="hero-title">体重趋势</view>
+    <view class="hero-sub">看长期变化，不看单日波动。</view>
+  </view>
+
+  <view class="dark-card w-card">
+    <view class="w-stat">
+      <text class="label-dark">最新</text>
+      <view class="w-value num">{{latest ? latest.weight : '--'}}<text class="w-unit" wx:if="{{latest}}"> kg</text></view>
+    </view>
+    <view class="w-stat side">
+      <text class="label-dark">近 30 天</text>
+      <view class="w-change num">
+        <image wx:if="{{change < 0}}" class="icon" src="/images/icons/arrow-down-lime.svg" />
+        <image wx:elif="{{change > 0}}" class="icon" src="/images/icons/arrow-up-white.svg" />
+        <text class="{{change < 0 ? 'down' : ''}}">{{changeText}}</text><text class="w-unit"> kg</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card w-chart-card">
+    <view class="w-chart-head">
+      <text class="section-title">体重变化</text>
+      <view class="w-ranges">
+        <view wx:for="{{ranges}}" wx:key="*this" class="w-range {{range === item ? 'active' : ''}}" bindtap="selectRange" data-range="{{item}}">近 {{item}} 天</view>
+      </view>
+    </view>
+    <image wx:if="{{chart}}" class="w-chart" src="{{chart}}" mode="widthFix" />
+    <view wx:else class="w-chart-empty">这段时间还没有体重记录</view>
+  </view>
+
+  <view class="card w-form">
+    <view class="section-title w-form-title">记录今日体重</view>
+    <view class="w-form-row">
+      <view class="w-form-col">
+        <text class="label">体重（kg）</text>
+        <view class="field muted w-field">
+          <input class="field-input num" type="digit" value="{{weightInput}}" bindinput="onWeightInput" placeholder="{{latest ? latest.weight : '60.0'}}" placeholder-class="placeholder" />
+          <text class="field-unit">kg</text>
+        </view>
+      </view>
+      <view class="w-form-col">
+        <text class="label">备注（可选）</text>
+        <view class="field muted w-field">
+          <input class="field-input w-note" value="{{weightNote}}" bindinput="onWeightNoteInput" placeholder="晨起空腹" placeholder-class="placeholder" />
+          <image wx:if="{{weightNote}}" class="icon" src="/images/icons/clear-circle-grey.svg" bindtap="clearNote" />
+        </view>
+      </view>
+    </view>
+    <view class="lime-btn compact w-save" bindtap="saveWeight">保存记录</view>
+  </view>
+
+  <view class="card w-recent" wx:if="{{recent.length}}">
+    <view class="w-recent-head">
+      <text class="section-title">最近记录</text>
+      <view class="section-link" wx:if="{{recent.length > 5}}" bindtap="toggleAll">{{showAll ? '收起' : '查看更多'}}<image class="icon" src="/images/icons/chevron-right-grey.svg" /></view>
+    </view>
+    <view class="w-row" wx:for="{{recent}}" wx:key="date" wx:if="{{showAll || index < 5}}">
+      <text class="w-row-date">{{item.title}}</text>
+      <text class="w-row-meta">{{item.weekday}} {{item.time}}</text>
+      <text class="w-row-weight num">{{item.weight}}<text class="w-row-kg"> kg</text></text>
+      <text class="w-row-note">{{item.note}}</text>
+    </view>
+  </view>
+</view>

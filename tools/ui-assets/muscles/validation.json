@@ -1,0 +1,154 @@
+{
+  "size": [
+    400,
+    800
+  ],
+  "highlight": "#C8F76E",
+  "targets": {
+    "chest": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "shoulders": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "biceps": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "arms": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "forearms": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "abs": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "quads": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "legs": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "cardio": {
+      "view": "front",
+      "bbox": [
+        76,
+        28,
+        325,
+        772
+      ]
+    },
+    "back": {
+      "view": "back",
+      "bbox": [
+        80,
+        28,
+        320,
+        772
+      ]
+    },
+    "traps": {
+      "view": "back",
+      "bbox": [
+        80,
+        28,
+        320,
+        772
+      ]
+    },
+    "lowerback": {
+      "view": "back",
+      "bbox": [
+        80,
+        28,
+        320,
+        772
+      ]
+    },
+    "triceps": {
+      "view": "back",
+      "bbox": [
+        80,
+        28,
+        320,
+        772
+      ]
+    },
+    "glutes": {
+      "view": "back",
+      "bbox": [
+        80,
+        28,
+        320,
+        772
+      ]
+    },
+    "hamstrings": {
+      "view": "back",
+      "bbox": [
+        80,
+        28,
+        320,
+        772
+      ]
+    },
+    "calves": {
+      "view": "back",
+      "bbox": [
+        80,
+        28,
+        320,
+        772
+      ]
+    }
+  },
+  "bytes": 982752
+}

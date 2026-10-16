@@ -1,263 +1,131 @@
-const app = getApp();
 const util = require('../../utils/util.js');
+const ui = require('../../utils/ui-helpers.js');
+const view = require('../../utils/records-view.js');
+const { calculateFatLossTargets } = require('../../utils/mvp-core.js');
+
+function loadRecordsByDate() {
+  const map = {};
+  util.getTrainingDates().forEach(date => {
+    const record = util.getTrainingRecord(date);
+    if (record) map[date] = { ...record, date: record.date || date };
+  });
+  return map;
+}
+
+function dailyCalorieTarget() {
+  const profile = util.getNutritionGoalProfile();
+  const goal = util.getNutritionGoal();
+  if (!profile || !goal) return 0;
+  if (profile.goal === 'fat_loss') {
+    const target = calculateFatLossTargets(profile);
+    return target.isMinor ? 0 : target.calorieRange.max;
+  }
+  return goal.isMinor ? 0 : goal.dailyCalories;
+}
 
 Page({
   data: {
-    activeTab: 'training',
-    trainingRecords: [],
-    nutritionRecords: [],
-    calendarLegend: [],
-    showDetail: false,
-    detailRecord: null,
-    calendarYear: new Date().getFullYear(),
-    calendarMonth: new Date().getMonth() + 1,
-    calendarWeeks: [],
-    calendarWeekdays: ['日', '一', '二', '三', '四', '五', '六']
+    tab: 'training',
+    year: 0,
+    month: 0,
+    calendar: null,
+    recent: [],
+    nutritionDate: '',
+    nutritionDateLabel: '',
+    nutritionTotal: null,
+    nutritionRing: '',
+    mealGroups: [],
+    today: ''
+  },
+
+  onLoad(options = {}) {
+    const today = util.getToday();
+    const date = new Date(`${today}T12:00:00`);
+    this.setData({
+      tab: options.tab === 'nutrition' ? 'nutrition' : 'training',
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      nutritionDate: /^\d{4}-\d{2}-\d{2}$/.test(options.date || '') ? options.date : today,
+      today
+    });
   },
 
   onShow() {
-    this.syncCustomTabBar();
-    this.loadRecords();
-  },
-
-  syncCustomTabBar() {
-    if (typeof this.getTabBar !== 'function') {
-      return;
-    }
-
-    const tabBar = this.getTabBar();
-    if (!tabBar) {
-      return;
-    }
-
-    tabBar.setData({
-      selected: 3
-    });
+    this.loadTraining();
+    this.loadNutrition();
   },
 
   switchTab(e) {
-    this.setData({
-      activeTab: e.currentTarget.dataset.tab
-    });
+    this.setData({ tab: e.currentTarget.dataset.tab });
   },
 
-  loadRecords() {
-    this.loadTrainingRecords();
-    this.loadNutritionRecords();
-    this.loadCalendar();
-  },
-
-  loadCalendar() {
-    const calendar = util.getTrainingCalendarData(this.data.calendarYear, this.data.calendarMonth);
-    this.setData({
-      calendarYear: calendar.year,
-      calendarMonth: calendar.month,
-      calendarWeeks: calendar.weeks
-    });
-  },
-
-  loadTrainingRecords() {
-    const state = app.refreshTrainingPlanState();
-    const plan = state.activePlan;
-    const colorMap = {};
-
-    if (plan && Array.isArray(plan.days)) {
-      plan.days.forEach(day => {
-        colorMap[day.id] = day.color;
-      });
-    }
-
-    const trainingRecords = util.getTrainingDates().map(date => {
-      const record = util.getTrainingRecord(date);
-      if (!record) {
-        return null;
-      }
-
-      const isRest = util.isRestRecord(record);
-      const exercises = Array.isArray(record.exercises) ? record.exercises : [];
-      const completedCount = exercises.filter(item => item && item.completed).length;
-      const totalSets = exercises.reduce((sum, item) => sum + (Array.isArray(item.sets) ? item.sets.length : 0), 0);
-      const dayKey = util.getCalendarRecordType(record);
-
-      return {
-        date: record.date,
-        dateCN: util.formatDateCN(record.date),
-        type: isRest ? 'rest' : 'training',
-        dayName: record.dayName || (isRest ? '休息日' : '未知训练日'),
-        dayType: dayKey,
-        dayId: util.getRecordDayId(record),
-        week: record.week || 1,
-        planName: record.planName || record.planTitle || '',
-        color: record.dayColor || colorMap[record.dayId] || colorMap[dayKey] || (isRest ? '#5F9A88' : '#C96565'),
-        completionRate: isRest ? 100 : (record.completionRate || 0),
-        completedCount: isRest ? 0 : completedCount,
-        totalCount: isRest ? 0 : exercises.length,
-        totalSets: isRest ? 0 : totalSets,
-        restCompleted: record.restCompleted !== false,
-        feeling: record.feeling || '',
-        note: record.note || '',
-        exercises
-      };
-    }).filter(Boolean);
-
-    this.setData({
-      trainingRecords,
-      calendarLegend: this.buildCalendarLegend(plan, trainingRecords)
-    });
-  },
-
-  buildCalendarLegend(plan, trainingRecords) {
-    const legend = [];
-    const seen = {};
-    let hasRest = false;
-
-    if (plan && Array.isArray(plan.days)) {
-      plan.days.forEach(day => {
-        if (!day || !day.id) {
-          return;
-        }
-
-        if (day.type === 'rest') {
-          hasRest = true;
-          return;
-        }
-
-        if (seen[day.id]) {
-          return;
-        }
-
-        seen[day.id] = true;
-        legend.push({
-          key: day.id,
-          label: day.name || '训练记录',
-          color: day.color || '#C96565'
-        });
-      });
-    }
-
-    trainingRecords.forEach(record => {
-      if (record.type === 'rest') {
-        hasRest = true;
-        return;
-      }
-
-      const key = record.dayId || record.dayType || record.dayName || `record_${legend.length}`;
-      if (seen[key]) {
-        return;
-      }
-
-      seen[key] = true;
-      legend.push({
-        key,
-        label: record.dayName || '训练记录',
-        color: record.color || '#C96565'
-      });
-    });
-
-    if (hasRest && !seen.rest) {
-      legend.push({
-        key: 'rest',
-        label: '休息日',
-        color: '#5F9A88'
-      });
-    }
-
-    return legend;
-  },
-
-  loadNutritionRecords() {
-    const nutritionRecords = util.getNutritionDates().map(date => {
-      const foods = util.getNutritionRecords(date);
+  // ---------- 训练记录 ----------
+  loadTraining() {
+    this._records = loadRecordsByDate();
+    const { year, month, today } = this.data;
+    const recent = Object.keys(this._records).sort().reverse().slice(0, 10).map(date => {
+      const record = this._records[date];
+      const isRest = record.type === 'rest';
+      const exercises = record.exercises || [];
+      const done = exercises.filter(exercise => exercise.completed || ((exercise.sets || []).length > 0 && exercise.sets.every(set => set && set.done))).length;
       return {
         date,
-        dateCN: util.formatDateCN(date),
-        count: foods.length,
-        total: util.calcDailyNutrition(foods),
-        foods,
-        showDetail: false
+        title: ui.dateTitle(date),
+        weekday: ui.weekdayLabel(date),
+        isRest,
+        name: isRest ? '休息日' : (record.dayName || '训练'),
+        status: isRest ? (record.restCompleted === false ? '未打卡' : '已记录恢复') : `已完成 ${done}/${exercises.length}`
       };
     });
-
-    this.setData({
-      nutritionRecords
-    });
-  },
-
-  viewTrainingDetail(e) {
-    this.openTrainingDetailByDate(e.currentTarget.dataset.date);
+    this.setData({ calendar: view.calendarMonth(year, month, this._records, today), recent });
   },
 
   switchMonth(e) {
-    const offset = Number(e.currentTarget.dataset.offset) || 0;
-    const nextMonth = new Date(this.data.calendarYear, this.data.calendarMonth - 1 + offset, 1);
-    this.setData({
-      calendarYear: nextMonth.getFullYear(),
-      calendarMonth: nextMonth.getMonth() + 1
-    }, () => {
-      this.loadCalendar();
-    });
+    const delta = Number(e.currentTarget.dataset.delta);
+    let { year, month } = this.data;
+    month += delta;
+    if (month < 1) { month = 12; year -= 1; }
+    if (month > 12) { month = 1; year += 1; }
+    this.setData({ year, month, calendar: view.calendarMonth(year, month, this._records || {}, this.data.today) });
   },
 
   selectCalendarDay(e) {
     const date = e.currentTarget.dataset.date;
-    if (!date) {
+    if (!this._records || !this._records[date]) {
+      wx.showToast({ title: '这天没有训练记录', icon: 'none' });
       return;
     }
-
-    this.openTrainingDetailByDate(date);
+    this.openDay({ currentTarget: { dataset: { date } } });
   },
 
-  openTrainingDetailByDate(date) {
-    const record = this.data.trainingRecords.find(item => item.date === date);
-    if (!record) {
-      return;
-    }
+  openDay(e) {
+    wx.navigateTo({ url: `/pages/history/day?date=${e.currentTarget.dataset.date}` });
+  },
 
+  // ---------- 饮食记录 ----------
+  loadNutrition() {
+    const date = this.data.nutritionDate;
+    const foods = util.getNutritionRecords(date);
+    const total = util.calcDailyNutrition(foods);
+    const target = dailyCalorieTarget();
+    const percent = ui.percent(total.calories, target);
     this.setData({
-      showDetail: true,
-      detailRecord: record
+      nutritionDateLabel: `${ui.dateTitle(date)}  ${ui.weekdayLabel(date)}`,
+      nutritionTotal: {
+        calories: ui.formatThousands(total.calories),
+        hasTarget: target > 0,
+        percent,
+        protein: Math.round(total.protein),
+        carbs: Math.round(total.carbs),
+        fat: Math.round(total.fat)
+      },
+      nutritionRing: view.ringSvg(percent, true),
+      mealGroups: view.buildMealGroups(foods)
     });
   },
 
-  closeDetail() {
-    this.setData({
-      showDetail: false,
-      detailRecord: null
-    });
-  },
-
-  deleteRecord(e) {
-    const date = e.currentTarget.dataset.date;
-
-    wx.showModal({
-      title: '确认删除',
-      content: '确定要删除这条训练记录吗？',
-      confirmColor: '#C96565',
-      success: (res) => {
-        if (!res.confirm) {
-          return;
-        }
-
-        util.deleteTrainingRecord(date);
-        this.setData({
-          showDetail: false,
-          detailRecord: null
-        });
-        this.loadTrainingRecords();
-        this.loadCalendar();
-        wx.showToast({
-          title: '已删除',
-          icon: 'success'
-        });
-      }
-    });
-  },
-
-  toggleNutritionDetail(e) {
-    const index = Number(e.currentTarget.dataset.index);
-    const key = `nutritionRecords[${index}].showDetail`;
-    this.setData({
-      [key]: !this.data.nutritionRecords[index].showDetail
-    });
+  onNutritionDateChange(e) {
+    this.setData({ nutritionDate: e.detail.value });
+    this.loadNutrition();
   }
 });

@@ -1,0 +1,23 @@
+.fl-target { padding: 30rpx 32rpx; }
+.fl-badge { position: absolute; right: 22rpx; top: 18rpx; display: flex; align-items: center; gap: 6rpx; padding: 6rpx 14rpx; border-radius: 10rpx; background: var(--dark-3); font-size: 20rpx; color: var(--dark-text-2); }
+.fl-target-row { position: relative; display: flex; align-items: flex-end; margin-top: 26rpx; }
+.fl-target-main { flex: 1.5; display: flex; flex-direction: column; gap: 4rpx; padding-right: 24rpx; border-right: 2rpx solid var(--dark-line); }
+.fl-target-side { flex: 1; display: flex; flex-direction: column; gap: 4rpx; padding-left: 28rpx; }
+.fl-range { font-size: 64rpx; line-height: 1.1; font-weight: 800; letter-spacing: -1rpx; }
+.fl-unit { font-size: 28rpx; color: #D6DBDD; font-weight: 600; letter-spacing: 0; }
+.fl-minor { position: relative; margin-top: 12rpx; font-size: 28rpx; line-height: 1.6; color: #D6DBDD; }
+.fl-setup { position: relative; margin-top: 24rpx; }
+
+.weight-link { display: flex; align-items: center; gap: 24rpx; margin-top: 20rpx; padding: 28rpx 26rpx; background: var(--surface); border-radius: var(--radius-lg); }
+.weight-link:active { background: #FAF9F6; }
+
+.habit { padding: 26rpx 26rpx; gap: 26rpx; }
+.habit-title { font-size: 31rpx; }
+.habit-box { width: 56rpx; height: 56rpx; border-radius: 14rpx; border: 3rpx solid #C9C7C0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.habit-box.on { background: var(--lime); border-color: var(--lime); }
+
+.rhythm { display: flex; align-items: center; padding: 28rpx 30rpx; background: var(--surface); border-radius: var(--radius-lg); }
+.rhythm-item { flex: 1; display: flex; align-items: center; gap: 22rpx; }
+.rhythm-sep { width: 2rpx; height: 80rpx; background: var(--line); margin: 0 24rpx; }
+.rhythm-value { font-size: 52rpx; font-weight: 800; }
+.rhythm-unit { font-size: 26rpx; }

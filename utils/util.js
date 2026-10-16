@@ -1,6 +1,8 @@
 const { calculateNutritionTargets } = require('./mvp-core.js');
 
 const NUTRITION_GOAL_PROFILE_KEY = 'nutrition_goal_profile';
+const FAT_LOSS_PROFILE_KEY = 'fat_loss_profile';
+const FAT_LOSS_WEIGHT_RECORDS_KEY = 'fat_loss_weight_records';
 
 function formatDate(date) {
   const year = date.getFullYear();
@@ -96,7 +98,7 @@ function createRestRecord(day, plan, date, formData) {
   };
 }
 
-function getPreviousExerciseRecords(exerciseId, beforeDate, limit) {
+function getPreviousExerciseRecords(exerciseId, beforeDate, limit, libraryId) {
   if (!exerciseId) {
     return [];
   }
@@ -116,7 +118,9 @@ function getPreviousExerciseRecords(exerciseId, beforeDate, limit) {
       continue;
     }
 
-    const exercise = record.exercises.find(item => item && item.id === exerciseId);
+    const exercise = record.exercises.find(item => item && (libraryId
+      ? (item.libraryId === libraryId || (!item.libraryId && item.id === exerciseId))
+      : item.id === exerciseId));
     if (!exercise) {
       continue;
     }
@@ -178,6 +182,10 @@ function getNutritionDates() {
 
 function round1(value) {
   return Math.round((Number(value) || 0) * 10) / 10;
+}
+
+function roundInt(value) {
+  return Math.round(Number(value) || 0);
 }
 
 function extractNutritionTotal(record) {
@@ -315,28 +323,10 @@ function parsePlanRepsMeta(planReps, setCount) {
 }
 
 function buildWeightOptions(referenceWeight) {
-  const safeReference = Math.max(0, Number(referenceWeight) || 0);
-  if (safeReference <= 0) {
-    const defaultOptions = [];
-    for (let value = 0; value <= 100; value += 5) {
-      defaultOptions.push(String(value));
-    }
-    return defaultOptions;
-  }
-
-  const start = Math.max(0, Math.floor((safeReference - 20) / 5) * 5);
-  const end = Math.ceil((safeReference + 30) / 5) * 5;
   const options = [];
 
-  if (start > 0) {
-    options.push('0');
-  }
-
-  for (let value = start; value <= end; value += 5) {
-    const text = String(value);
-    if (!options.includes(text)) {
-      options.push(text);
-    }
+  for (let value = 0; value <= 100; value += 5) {
+    options.push(String(value));
   }
 
   return options;
@@ -472,14 +462,16 @@ function isExerciseStable(exercise) {
 
 function getProgressiveOverloadSuggestion(exerciseId, beforeDate) {
   const records = getPreviousExerciseRecords(exerciseId, beforeDate, 2);
-  if (records.length < 2 || !records.every(item => isExerciseStable(item.exercise))) {
+  if (!records.length) {
     return { show: false, message: '' };
   }
-
-  return {
-    show: true,
-    message: '最近两次完成度比较稳定，下次可以在动作依然标准的前提下小幅加重，例如 +2.5kg。'
-  };
+  const previous = records[0].exercise;
+  const suggestion = require('./progression.js').suggestNextTarget({
+    planReps: previous.planReps,
+    planSets: previous.planSets || (previous.sets || []).length,
+    history: records
+  });
+  return { ...suggestion, show: suggestion.type !== 'none' };
 }
 
 function getTrainingCalendarData(year, month) {
@@ -554,6 +546,88 @@ function getNutritionGoal() {
   return calculateNutritionTargets(profile);
 }
 
+function saveFatLossProfile(profile) {
+  wx.setStorageSync(FAT_LOSS_PROFILE_KEY, profile || null);
+}
+
+function getFatLossProfile() {
+  return wx.getStorageSync(FAT_LOSS_PROFILE_KEY) || null;
+}
+
+function saveFatLossHabits(date, record) {
+  if (!date) {
+    return;
+  }
+
+  wx.setStorageSync(`fat_loss_habits_${date}`, record);
+
+  const dates = getFatLossHabitDates();
+  if (!dates.includes(date)) {
+    dates.unshift(date);
+    dates.sort((a, b) => b.localeCompare(a));
+    wx.setStorageSync('fat_loss_habit_dates', dates);
+  }
+}
+
+function getFatLossHabits(date) {
+  return wx.getStorageSync(`fat_loss_habits_${date}`) || null;
+}
+
+function getFatLossHabitDates() {
+  return wx.getStorageSync('fat_loss_habit_dates') || [];
+}
+
+function saveFatLossWeightRecord(date, weight, note) {
+  if (!date) {
+    return;
+  }
+
+  const records = getFatLossWeightRecords().filter(item => item && item.date !== date);
+  records.push({
+    date,
+    weight: Number(weight),
+    note: note || '',
+    time: new Date().toISOString()
+  });
+  records.sort((left, right) => left.date.localeCompare(right.date));
+  wx.setStorageSync(FAT_LOSS_WEIGHT_RECORDS_KEY, records);
+}
+
+function getFatLossWeightRecords() {
+  return wx.getStorageSync(FAT_LOSS_WEIGHT_RECORDS_KEY) || [];
+}
+
+function getFatLossWeeklySummary() {
+  const recentDates = getRecentDays(7);
+  const habitRecords = recentDates
+    .map(date => getFatLossHabits(date))
+    .filter(Boolean);
+  const nutritionTotals = recentDates
+    .map(date => calcDailyNutrition(getNutritionRecords(date)))
+    .filter(item => item.calories > 0 || item.protein > 0 || item.fat > 0 || item.carbs > 0);
+  const trainingRecords = recentDates
+    .map(date => getTrainingRecord(date))
+    .filter(Boolean);
+  const totalHabitChecks = habitRecords.reduce((sum, item) => {
+    return sum + Object.values(item && item.habits ? item.habits : {}).filter(Boolean).length;
+  }, 0);
+
+  return {
+    trainingCount: getTrainingCount(trainingRecords),
+    restDays: getRestDayCount(trainingRecords),
+    avgCalories: nutritionTotals.length
+      ? roundInt(nutritionTotals.reduce((sum, item) => sum + item.calories, 0) / nutritionTotals.length)
+      : 0,
+    avgProtein: nutritionTotals.length
+      ? round1(nutritionTotals.reduce((sum, item) => sum + item.protein, 0) / nutritionTotals.length)
+      : 0,
+    habitCompletionRate: habitRecords.length
+      ? roundInt((totalHabitChecks / (habitRecords.length * 7)) * 100)
+      : 0,
+    latestWeight: getFatLossWeightRecords().slice(-1)[0] || null
+  };
+}
+
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
@@ -591,5 +665,13 @@ module.exports = {
   saveNutritionGoalProfile,
   getNutritionGoalProfile,
   getNutritionGoal,
+  saveFatLossProfile,
+  getFatLossProfile,
+  saveFatLossHabits,
+  getFatLossHabits,
+  getFatLossHabitDates,
+  saveFatLossWeightRecord,
+  getFatLossWeightRecords,
+  getFatLossWeeklySummary,
   generateId
 };

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const projectRoot = path.resolve(__dirname, '..');
 
@@ -36,25 +37,31 @@ function loadUtilFresh() {
 function testAppThemeIsAirHealth() {
   const appJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'app.json'), 'utf8'));
 
-  assert.strictEqual(appJson.window.navigationBarBackgroundColor, '#F4F8F7');
+  assert.strictEqual(appJson.window.navigationStyle, 'custom');
   assert.strictEqual(appJson.window.navigationBarTextStyle, 'black');
-  assert.strictEqual(appJson.window.backgroundColor, '#F4F8F7');
-  assert.strictEqual(appJson.tabBar.color, '#8C98A4');
-  assert.strictEqual(appJson.tabBar.selectedColor, '#D97878');
-  assert.strictEqual(appJson.tabBar.borderStyle, 'white');
+  assert.strictEqual(appJson.window.backgroundColor, '#F6F4EE');
+  assert.strictEqual(appJson.usingComponents['nav-bar'], '/components/nav-bar/nav-bar');
+  assert.strictEqual(appJson.tabBar.color, '#5D6366');
+  assert.strictEqual(appJson.tabBar.selectedColor, '#111517');
+  let customTabBar;
+  vm.runInNewContext(fs.readFileSync(path.join(projectRoot, 'custom-tab-bar', 'index.js'), 'utf8'), {
+    Component(definition) { customTabBar = definition; }
+  });
+  assert.strictEqual(customTabBar.data.color, appJson.tabBar.color);
+  assert.strictEqual(customTabBar.data.selectedColor, appJson.tabBar.selectedColor);
 }
 
-function testStartTrainingSetsSelectionBeforeSwitchTab() {
+function testStartTrainingSetsSelectionBeforeNavigation() {
   const indexSource = fs.readFileSync(path.join(projectRoot, 'pages', 'index', 'index.js'), 'utf8');
-  const switchTabIndex = indexSource.indexOf('wx.switchTab');
+  const navigationIndex = indexSource.indexOf('wx.navigateTo', indexSource.indexOf('startTraining(e)'));
   const selectedDayIndexAssignment = indexSource.indexOf('app.globalData.selectedDayIndex = dayIndex');
   const selectedDayIdAssignment = indexSource.indexOf("app.globalData.selectedDayId = day ? day.id : ''");
 
   assert(selectedDayIndexAssignment >= 0, 'selectedDayIndex assignment missing');
   assert(selectedDayIdAssignment >= 0, 'selectedDayId assignment missing');
-  assert(switchTabIndex >= 0, 'wx.switchTab call missing');
-  assert(selectedDayIndexAssignment < switchTabIndex, 'selectedDayIndex should be set before switchTab');
-  assert(selectedDayIdAssignment < switchTabIndex, 'selectedDayId should be set before switchTab');
+  assert(navigationIndex >= 0, 'training navigation missing');
+  assert(selectedDayIndexAssignment < navigationIndex, 'selectedDayIndex should be set before navigation');
+  assert(selectedDayIdAssignment < navigationIndex, 'selectedDayId should be set before navigation');
 }
 
 function testTrainingStatsSupportsDynamicDistribution() {
@@ -111,7 +118,7 @@ function testFoodRecognizeUsesEnvModelAndDoesNotShipProdMockAsSuccess() {
 
 function run() {
   testAppThemeIsAirHealth();
-  testStartTrainingSetsSelectionBeforeSwitchTab();
+  testStartTrainingSetsSelectionBeforeNavigation();
   testTrainingStatsSupportsDynamicDistribution();
   testWeekLabelsAndHardcodedSplitNamesAreHidden();
   testFoodRecognizeUsesEnvModelAndDoesNotShipProdMockAsSuccess();

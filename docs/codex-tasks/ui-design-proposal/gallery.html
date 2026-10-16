@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenGym · UI 功能图集</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #12191d; color: #f4f3ec; }
+    header { max-width: 1460px; margin: auto; padding: 52px 28px 22px; }
+    .eyebrow { color: #c6f26a; font-size: 12px; font-weight: 700; letter-spacing: .2em; }
+    h1 { margin: 12px 0 10px; font-size: clamp(32px, 5vw, 58px); line-height: 1.08; }
+    .intro { max-width: 780px; color: #aeb8b5; line-height: 1.7; }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 28px; }
+    .filters button { border: 1px solid #3b4749; border-radius: 999px; background: transparent; color: #e3e8e2; padding: 10px 17px; font: inherit; cursor: pointer; }
+    .filters button[aria-pressed="true"] { border-color: #c6f26a; background: #c6f26a; color: #11191d; font-weight: 700; }
+    main { max-width: 1460px; margin: auto; padding: 14px 28px 80px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(242px, 1fr)); gap: 22px; }
+    .card { display: block; overflow: hidden; border: 1px solid #334044; border-radius: 16px; background: #1c262a; color: inherit; text-decoration: none; transition: transform .18s, border-color .18s; }
+    .card:hover, .card:focus-visible { transform: translateY(-4px); border-color: #c6f26a; outline: none; }
+    .frame { height: 390px; display: grid; place-items: center; background: #0c1216; overflow: hidden; }
+    .frame img { display: block; height: 100%; width: auto; max-width: 100%; object-fit: contain; }
+    .meta { padding: 17px 17px 19px; }
+    .num { font-size: 12px; font-weight: 700; color: #c6f26a; letter-spacing: .1em; }
+    .name { display: block; margin-top: 7px; font-size: 18px; font-weight: 700; }
+    .group { display: block; margin-top: 5px; color: #aeb8b5; font-size: 12px; }
+    footer { max-width: 1460px; margin: auto; padding: 0 28px 44px; color: #aeb8b5; line-height: 1.7; }
+    footer a { color: #c6f26a; }
+    [hidden] { display: none !important; }
+    @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">OPENGYM / UI EXPLORATION</div>
+    <h1>24 个功能，一套界面语言。</h1>
+    <p class="intro">点击任意图片查看原尺寸。深色用于训练和关键数据，暖白用于浏览与录入。图中数据和插画仅供视觉讨论，尚未写入小程序。</p>
+    <nav class="filters" aria-label="按功能筛选">
+      <button type="button" data-filter="all" aria-pressed="true">全部 24</button>
+      <button type="button" data-filter="discover" aria-pressed="false">今天与动作库</button>
+      <button type="button" data-filter="training" aria-pressed="false">计划与训练</button>
+      <button type="button" data-filter="nutrition" aria-pressed="false">饮食</button>
+      <button type="button" data-filter="progress" aria-pressed="false">我的与记录</button>
+    </nav>
+  </header>
+  <main>
+    <div class="grid" id="gallery">
+      <a class="card" data-group="discover" href="screens/01-today.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/01-today.png" alt="今天首页" loading="lazy"></span><span class="meta"><span class="num">01</span><span class="name">今天首页</span><span class="group">今天与动作库</span></span></a>
+      <a class="card" data-group="discover" href="screens/02-library-home.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/02-library-home.png" alt="动作库首页" loading="lazy"></span><span class="meta"><span class="num">02</span><span class="name">动作库首页</span><span class="group">今天与动作库</span></span></a>
+      <a class="card" data-group="discover" href="screens/03-library-search.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/03-library-search.png" alt="搜索与筛选" loading="lazy"></span><span class="meta"><span class="num">03</span><span class="name">搜索与筛选</span><span class="group">今天与动作库</span></span></a>
+      <a class="card" data-group="discover" href="screens/04-exercise-detail.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/04-exercise-detail.png" alt="动作详情与教学" loading="lazy"></span><span class="meta"><span class="num">04</span><span class="name">动作详情与教学</span><span class="group">今天与动作库</span></span></a>
+      <a class="card" data-group="training" href="screens/05-plan-overview.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/05-plan-overview.png" alt="计划总览" loading="lazy"></span><span class="meta"><span class="num">05</span><span class="name">计划总览</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="training" href="screens/06-plan-manager.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/06-plan-manager.png" alt="计划管理" loading="lazy"></span><span class="meta"><span class="num">06</span><span class="name">计划管理</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="training" href="screens/07-plan-editor.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/07-plan-editor.png" alt="创建与编辑计划" loading="lazy"></span><span class="meta"><span class="num">07</span><span class="name">创建与编辑计划</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="training" href="screens/08-plan-pick-exercise.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/08-plan-pick-exercise.png" alt="从动作库选择" loading="lazy"></span><span class="meta"><span class="num">08</span><span class="name">从动作库选择</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="training" href="screens/09-workout-record.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/09-workout-record.png" alt="训练组数记录" loading="lazy"></span><span class="meta"><span class="num">09</span><span class="name">训练组数记录</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="training" href="screens/10-rest-timer.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/10-rest-timer.png" alt="组间休息计时" loading="lazy"></span><span class="meta"><span class="num">10</span><span class="name">组间休息计时</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="training" href="screens/11-progression.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/11-progression.png" alt="加量建议与个人纪录" loading="lazy"></span><span class="meta"><span class="num">11</span><span class="name">加量建议与个人纪录</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="training" href="screens/12-recovery-day.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/12-recovery-day.png" alt="恢复日记录" loading="lazy"></span><span class="meta"><span class="num">12</span><span class="name">恢复日记录</span><span class="group">计划与训练</span></span></a>
+      <a class="card" data-group="nutrition" href="screens/13-diet-overview.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/13-diet-overview.png" alt="今日营养总览" loading="lazy"></span><span class="meta"><span class="num">13</span><span class="name">今日营养总览</span><span class="group">饮食</span></span></a>
+      <a class="card" data-group="nutrition" href="screens/14-meal-entry-method.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/14-meal-entry-method.png" alt="选择添加方式" loading="lazy"></span><span class="meta"><span class="num">14</span><span class="name">选择添加方式</span><span class="group">饮食</span></span></a>
+      <a class="card" data-group="nutrition" href="screens/15-food-scan-result.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/15-food-scan-result.png" alt="拍照识别结果确认" loading="lazy"></span><span class="meta"><span class="num">15</span><span class="name">拍照识别结果确认</span><span class="group">饮食</span></span></a>
+      <a class="card" data-group="nutrition" href="screens/16-manual-food-entry.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/16-manual-food-entry.png" alt="手动补录与修正" loading="lazy"></span><span class="meta"><span class="num">16</span><span class="name">手动补录与修正</span><span class="group">饮食</span></span></a>
+      <a class="card" data-group="nutrition" href="screens/17-nutrition-goals.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/17-nutrition-goals.png" alt="营养参考目标" loading="lazy"></span><span class="meta"><span class="num">17</span><span class="name">营养参考目标</span><span class="group">饮食</span></span></a>
+      <a class="card" data-group="progress" href="screens/18-me.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/18-me.png" alt="我的首页" loading="lazy"></span><span class="meta"><span class="num">18</span><span class="name">我的首页</span><span class="group">我的与记录</span></span></a>
+      <a class="card" data-group="progress" href="screens/19-history-calendar.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/19-history-calendar.png" alt="训练历史日历" loading="lazy"></span><span class="meta"><span class="num">19</span><span class="name">训练历史日历</span><span class="group">我的与记录</span></span></a>
+      <a class="card" data-group="progress" href="screens/20-history-training-detail.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/20-history-training-detail.png" alt="单日训练详情" loading="lazy"></span><span class="meta"><span class="num">20</span><span class="name">单日训练详情</span><span class="group">我的与记录</span></span></a>
+      <a class="card" data-group="progress" href="screens/21-history-nutrition.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/21-history-nutrition.png" alt="饮食历史" loading="lazy"></span><span class="meta"><span class="num">21</span><span class="name">饮食历史</span><span class="group">我的与记录</span></span></a>
+      <a class="card" data-group="progress" href="screens/22-stats-pr.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/22-stats-pr.png" alt="统计与个人纪录" loading="lazy"></span><span class="meta"><span class="num">22</span><span class="name">统计与个人纪录</span><span class="group">我的与记录</span></span></a>
+      <a class="card" data-group="progress" href="screens/23-fatloss-habits.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/23-fatloss-habits.png" alt="健康减脂习惯" loading="lazy"></span><span class="meta"><span class="num">23</span><span class="name">健康减脂习惯</span><span class="group">我的与记录</span></span></a>
+      <a class="card" data-group="progress" href="screens/24-weight-trend.png" target="_blank" rel="noopener"><span class="frame"><img src="screens/24-weight-trend.png" alt="体重趋势与记录" loading="lazy"></span><span class="meta"><span class="num">24</span><span class="name">体重趋势与记录</span><span class="group">我的与记录</span></span></a>
+    </div>
+  </main>
+  <footer>视觉稿由 ImageGen 生成，界面中的数值、动作计数、图片和文字是演示内容。<a href="README.md">查看逐项图片目录</a> · <a href="../ui-before-redesign/README.md">查看改版前原图</a></footer>
+  <script>
+    const buttons = Array.from(document.querySelectorAll('[data-filter]'));
+    const cards = Array.from(document.querySelectorAll('.card[data-group]'));
+    buttons.forEach(button => button.addEventListener('click', () => {
+      const filter = button.dataset.filter;
+      buttons.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      cards.forEach(card => { card.hidden = filter !== 'all' && card.dataset.group !== filter; });
+    }));
+  </script>
+</body>
+</html>

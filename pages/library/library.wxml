@@ -1,0 +1,26 @@
+<nav-bar />
+<view class="page has-tabbar hub">
+  <view class="hero">
+    <view class="hero-title">找到你的动作</view>
+    <view class="hero-sub">按肌群浏览，快速找到适合的训练动作。</view>
+  </view>
+
+  <view class="hub-search">
+    <image class="icon" src="/images/icons/search-grey.svg" />
+    <input class="hub-search-input" value="{{keyword}}" bindinput="onSearchInput" bindconfirm="search" confirm-type="search" placeholder="搜索动作、肌群或器械" placeholder-class="placeholder" aria-label="搜索动作、肌群或器械" />
+  </view>
+
+  <view class="body-grid">
+    <view wx:for="{{bodyParts}}" wx:key="key" class="body-card" data-key="{{item.key}}" bindtap="choosePart">
+      <image class="body-figure" src="/images/muscles/dark/{{item.figure}}.png" mode="aspectFit" />
+      <view class="body-copy">
+        <text class="body-name">{{item.label}}</text>
+        <text class="body-count num">{{item.count}} 个动作</text>
+      </view>
+      <image class="icon body-arrow" src="/images/icons/chevron-right-white.svg" />
+    </view>
+  </view>
+
+  <view class="lime-btn hub-browse" bindtap="browseAll"><text class="lime-btn-text">浏览全部动作</text><image class="icon" src="/images/icons/chevron-right-ink.svg" /></view>
+  <view class="hub-note">1324 个动作 · 中文分步教学</view>
+</view>

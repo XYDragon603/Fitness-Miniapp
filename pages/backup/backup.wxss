@@ -1,0 +1,11 @@
+.b-card { min-height: 220rpx; padding: 32rpx; }
+.b-time { position: relative; margin-top: 14rpx; font-size: 60rpx; font-weight: 800; }
+.b-meta { position: relative; margin-top: 8rpx; font-size: 27rpx; color: #D6DBDD; }
+.b-state { position: relative; margin-top: 18rpx; font-size: 40rpx; font-weight: 800; color: #D6DBDD; }
+.b-error { display: flex; align-items: center; gap: 10rpx; margin-top: 18rpx; padding: 18rpx 22rpx; border-radius: 16rpx; background: #F5E8CF; font-size: 25rpx; color: #8A5A12; }
+.b-local { margin-top: 24rpx; }
+.b-label { flex: 1; font-size: 29rpx; font-weight: 700; }
+.b-value { font-size: 27rpx; color: var(--text-2); }
+.b-actions { display: flex; flex-direction: column; gap: 18rpx; margin-top: 36rpx; }
+.b-disabled { opacity: 0.4; }
+.b-note { margin-top: 30rpx; font-size: 24rpx; line-height: 1.7; color: var(--text-2); }

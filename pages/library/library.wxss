@@ -1,0 +1,14 @@
+.hub-search { display: flex; align-items: center; gap: 18rpx; height: 100rpx; padding: 0 30rpx; border-radius: 24rpx; background: var(--surface-2); }
+.hub-search-input { flex: 1; height: 100rpx; font-size: 31rpx; color: var(--text); }
+
+.body-grid { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 28rpx; }
+.body-card { position: relative; overflow: hidden; width: calc(50% - 8rpx); height: 286rpx; border-radius: 24rpx; background: var(--dark); }
+.body-card:active { opacity: 0.92; }
+.body-figure { position: absolute; right: -24rpx; top: 6rpx; width: 220rpx; height: 400rpx; }
+.body-copy { position: absolute; left: 26rpx; top: 30rpx; display: flex; flex-direction: column; gap: 8rpx; }
+.body-name { font-size: 50rpx; font-weight: 800; color: #FFFFFF; }
+.body-count { font-size: 25rpx; color: #D6DBDD; }
+.body-arrow { position: absolute; left: 20rpx; bottom: 24rpx; }
+
+.hub-browse { margin-top: 28rpx; }
+.hub-note { margin-top: 18rpx; text-align: center; font-size: 24rpx; color: var(--text-3); }

@@ -6,6 +6,7 @@ const ACTIVITY_FACTORS = {
 };
 
 const PORTION_PRESETS = {
+  half: 0.5,
   small: 0.8,
   standard: 1,
   large: 1.25
@@ -67,6 +68,51 @@ function calculateNutritionTargets(profile) {
     carbTarget,
     isMinor: age > 0 && age < 18,
     guidanceMode: age > 0 && age < 18 ? 'gentle' : 'standard'
+  };
+}
+
+function calculateFatLossTargets(profile) {
+  const activityFactor = ACTIVITY_FACTORS[profile.activityLevel] || ACTIVITY_FACTORS.light;
+  const weight = Number(profile.weight) || 0;
+  const age = Number(profile.age) || 0;
+  const bmr = calculateBmr(profile);
+  const tdee = roundInt(bmr * activityFactor);
+
+  if (age < 18) {
+    return {
+      isMinor: true,
+      tdee,
+      calorieRange: null,
+      proteinTarget: null,
+      fatRange: null,
+      carbTarget: null,
+      note: '成长阶段能量需求差异较大，当前内容仅用于健康记录参考，如需调整饮食建议咨询家长或专业人士。'
+    };
+  }
+
+  const minCalories = roundInt(tdee * 0.9);
+  const maxCalories = roundInt(tdee * 0.95);
+  const proteinTarget = round1(weight * 1.6);
+  const proteinCalories = proteinTarget * 4;
+  const fatMin = round1((minCalories * 0.2) / 9);
+  const fatMax = round1((maxCalories * 0.35) / 9);
+  const fatReferenceCalories = ((fatMin + fatMax) / 2) * 9;
+  const carbTarget = round1(Math.max(0, (maxCalories - proteinCalories - fatReferenceCalories) / 4));
+
+  return {
+    isMinor: false,
+    tdee,
+    calorieRange: {
+      min: minCalories,
+      max: maxCalories
+    },
+    proteinTarget,
+    fatRange: {
+      min: fatMin,
+      max: fatMax
+    },
+    carbTarget,
+    note: '以每日参考热量区间和营养参考目标为主，关注长期趋势，不做强制限制。'
   };
 }
 
@@ -135,6 +181,7 @@ module.exports = {
   ACTIVITY_FACTORS,
   PORTION_PRESETS,
   calculateNutritionTargets,
+  calculateFatLossTargets,
   createPortionAdjustedFood,
   sanitizeGuideUrl
 };

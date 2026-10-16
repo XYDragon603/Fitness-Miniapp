@@ -1,0 +1,64 @@
+<nav-bar back />
+<view class="page has-footer detail">
+  <block wx:if="{{item}}">
+    <view class="detail-head">
+      <view class="detail-name">{{item.name}}</view>
+      <view class="detail-name-en">{{view.nameEn}}</view>
+    </view>
+
+    <view class="dark-card demo">
+      <text class="label-dark demo-label">动作示意</text>
+      <image wx:if="{{mediaUrl}}" class="demo-media" src="{{mediaUrl}}" mode="aspectFit" binderror="onMediaError" />
+      <view wx:elif="{{view.gif}}" class="demo-gif-wrap"><image class="demo-gif media" src="{{view.gif}}" mode="aspectFit" binderror="onGifError" /><text class="demo-credit">{{view.attribution}}</text></view>
+      <image wx:else class="demo-media" src="{{view.image}}" mode="aspectFit" />
+      <view class="demo-facts">
+        <view class="demo-fact"><image class="demo-fact-icon" src="{{view.bodyFigure}}" mode="aspectFit" /><text>{{item.bodyPartLabel}}</text></view>
+        <view class="demo-sep"></view>
+        <view class="demo-fact"><image class="icon" src="/images/icons/dumbbell-lime.svg" /><text>{{item.equipmentLabel}}</text></view>
+        <view class="demo-sep"></view>
+        <view class="demo-fact"><image class="demo-fact-icon" src="{{view.bodyFigure}}" mode="aspectFit" /><text>{{item.targetLabel}}</text></view>
+      </view>
+    </view>
+
+    <view class="mark-title">训练肌群</view>
+    <view class="muscles">
+      <view class="muscle-card">
+        <view class="muscle-copy">
+          <text class="muscle-kind">主要肌群</text>
+          <text class="muscle-name">{{view.primary}}</text>
+          <text class="muscle-desc">{{view.primaryDesc}}</text>
+        </view>
+        <image class="muscle-figure" src="{{view.primaryFigure}}" mode="aspectFit" />
+      </view>
+      <view class="muscle-card" wx:if="{{view.secondary}}">
+        <view class="muscle-copy">
+          <text class="muscle-kind">次要肌群</text>
+          <text class="muscle-name">{{view.secondary}}</text>
+          <text class="muscle-desc">{{view.secondaryDesc}}</text>
+        </view>
+        <image class="muscle-figure" src="{{view.secondaryFigure}}" mode="aspectFit" />
+      </view>
+    </view>
+
+    <view class="mark-title">动作步骤</view>
+    <view class="steps">
+      <view wx:for="{{item.steps}}" wx:key="index" class="step">
+        <view class="step-no num">{{index + 1}}</view>
+        <view class="step-text">{{item}}</view>
+      </view>
+      <view wx:if="{{!item.steps.length}}" class="step-text muted">动作说明稍后补充</view>
+    </view>
+  </block>
+
+  <view wx:else class="empty">
+    <view class="empty-figure"><image class="icon-lg" src="/images/icons/search-grey.svg" /></view>
+    <view class="empty-title">未找到该动作</view>
+    <view class="empty-text">请返回动作库选择其他动作</view>
+  </view>
+</view>
+<view class="footer-bar" wx:if="{{item}}">
+  <view class="lime-btn" bindtap="onAddTap">
+    <image class="icon" src="/images/icons/plus-ink.svg" />
+    {{addedCount ? '已加入 ' + addedCount + ' 次 · 再次加入' : '加入训练计划'}}
+  </view>
+</view>

@@ -1,0 +1,75 @@
+<nav-bar />
+<view class="page has-tabbar today">
+  <view class="hero">
+    <view class="hero-date">{{dateLabel}}</view>
+    <view class="hero-title">{{title}}</view>
+    <view class="hero-sub">{{day && day.isRest ? '恢复也是训练的一部分。' : '持续训练，让更好的自己成为日常。'}}</view>
+  </view>
+
+  <!-- 今日训练 -->
+  <view class="dark-card today-card" wx:if="{{day}}">
+    <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />
+    <view class="today-card-top">
+      <text class="label-dark">{{day.isRest ? '今日恢复' : '今日训练'}}</text>
+      <view class="today-switch" wx:if="{{dayOptions.length > 1}}" bindtap="switchDay">切换<image class="icon-sm" src="/images/icons/chevron-right-grey.svg" /></view>
+    </view>
+    <view class="today-card-body">
+      <view class="today-card-copy">
+        <view class="today-card-title">{{day.name}}</view>
+        <view class="today-card-meta" wx:if="{{!day.isRest}}">{{day.exerciseCount}} 个动作 <text class="dot">•</text> {{day.minutes}} 分钟</view>
+        <view class="today-card-meta" wx:else>{{day.description}}</view>
+      </view>
+      <image wx:if="{{day.image && !day.isRest}}" class="today-card-image" src="{{day.image}}" mode="aspectFit" />
+      <image wx:if="{{day.isRest}}" class="today-card-moon" src="/images/icons/moon-white.svg" />
+    </view>
+    <view class="lime-btn with-icon today-start" bindtap="startTraining">
+      <image class="icon" src="/images/icons/play-ink.svg" />
+      <text class="lime-btn-text">{{day.isRest ? '记录恢复状态' : hasTodayRecord ? '继续训练' : '开始训练'}}</text>
+      <image class="icon" src="/images/icons/chevron-right-ink.svg" />
+    </view>
+  </view>
+
+  <view class="dark-card today-card" wx:else>
+    <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />
+    <view class="label-dark">还没有训练计划</view>
+    <view class="today-card-title">先选一个计划开始</view>
+    <view class="today-card-meta">内置三分化参考计划，或从动作库自己搭。</view>
+    <view class="lime-btn with-icon today-start" bindtap="openPlans">
+      <text class="lime-btn-text">选择训练计划</text>
+      <image class="icon" src="/images/icons/chevron-right-ink.svg" />
+    </view>
+  </view>
+
+  <!-- 本周训练节奏 -->
+  <view class="section-head">
+    <text class="section-title">本周训练节奏</text>
+    <view class="section-link" bindtap="openPlans">查看计划<image class="icon" src="/images/icons/chevron-right-grey.svg" /></view>
+  </view>
+  <view class="week">
+    <view wx:for="{{week}}" wx:key="date" class="week-cell {{item.isToday ? 'is-today' : ''}}">
+      <text class="week-name">{{item.name}}</text>
+      <text class="week-date num">{{item.md}}</text>
+      <image wx:if="{{item.status === 'done'}}" class="week-status" src="/images/icons/check-circle-ink.svg" />
+      <view wx:elif="{{item.status === 'today'}}" class="week-status week-dot"></view>
+      <view wx:else class="week-status week-ring"></view>
+      <text class="week-focus">{{item.focus}}</text>
+    </view>
+  </view>
+
+  <!-- 下一个动作 -->
+  <block wx:if="{{nextExercise}}">
+    <view class="divider today-divider"></view>
+    <view class="section-head">
+      <text class="section-title">下一个动作</text>
+      <view class="section-link" bindtap="openPlans">查看全部<image class="icon" src="/images/icons/chevron-right-grey.svg" /></view>
+    </view>
+    <view class="next-card" bindtap="startTraining">
+      <image class="next-image {{nextExercise.thumb ? 'media' : ''}}" src="{{nextExercise.thumb || nextExercise.image}}" mode="aspectFit" />
+      <view class="next-copy">
+        <view class="next-name">{{nextExercise.name}}</view>
+        <view class="next-meta num">{{nextExercise.sets}} 组 × {{nextExercise.reps}} 次</view>
+      </view>
+      <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
+    </view>
+  </block>
+</view>

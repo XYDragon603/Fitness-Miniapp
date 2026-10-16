@@ -1,0 +1,12 @@
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #F6F4EE; }
+.nav.is-dark { background: #0E1416; }
+.nav-row { position: relative; display: flex; align-items: center; padding-left: 12rpx; }
+.nav-back { width: 76rpx; height: 76rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.nav-back:active { opacity: 0.6; }
+.nav-back-icon { width: 48rpx; height: 48rpx; }
+.nav-title-wrap { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-left: 4rpx; }
+.nav-title-wrap.is-center { position: absolute; top: 0; bottom: 0; align-items: center; padding-left: 0; }
+.nav-title { font-size: 36rpx; font-weight: 800; color: #111517; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-subtitle { font-size: 22rpx; color: #5E625F; margin-top: 2rpx; }
+.is-dark .nav-title { color: #FFFFFF; }
+.is-dark .nav-subtitle { color: #A3AAAD; }

@@ -2,38 +2,38 @@ Component({
   data: {
     selected: 0,
     hidden: false,
-    color: '#64727D',
-    selectedColor: '#C96565',
+    color: '#5D6366',
+    selectedColor: '#111517',
     list: [
       {
-        pagePath: '/pages/index/index',
-        text: '训练计划',
-        iconPath: '/images/plan.png',
-        selectedIconPath: '/images/plan-active.png'
+        pagePath: '/pages/today/today',
+        text: '今天',
+        iconPath: '/images/tab-today.png',
+        selectedIconPath: '/images/tab-today-active.png'
       },
       {
-        pagePath: '/pages/record/record',
-        text: '训练记录',
-        iconPath: '/images/record.png',
-        selectedIconPath: '/images/record-active.png'
+        pagePath: '/pages/library/library',
+        text: '动作库',
+        iconPath: '/images/tab-library.png',
+        selectedIconPath: '/images/tab-library-active.png'
+      },
+      {
+        pagePath: '/pages/index/index',
+        text: '计划',
+        iconPath: '/images/tab-plan.png',
+        selectedIconPath: '/images/tab-plan-active.png'
       },
       {
         pagePath: '/pages/nutrition/nutrition',
-        text: '营养记录',
-        iconPath: '/images/food.png',
-        selectedIconPath: '/images/food-active.png'
+        text: '饮食',
+        iconPath: '/images/tab-diet.png',
+        selectedIconPath: '/images/tab-diet-active.png'
       },
       {
-        pagePath: '/pages/history/history',
-        text: '历史记录',
-        iconPath: '/images/history.png',
-        selectedIconPath: '/images/history-active.png'
-      },
-      {
-        pagePath: '/pages/stats/stats',
-        text: '数据统计',
-        iconPath: '/images/stats.png',
-        selectedIconPath: '/images/stats-active.png'
+        pagePath: '/pages/me/me',
+        text: '我的',
+        iconPath: '/images/tab-me.png',
+        selectedIconPath: '/images/tab-me-active.png'
       }
     ]
   },

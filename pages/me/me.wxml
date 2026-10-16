@@ -1,0 +1,62 @@
+<nav-bar />
+<view class="page has-tabbar me">
+  <view class="hero">
+    <view class="hero-title">每一次，都算数</view>
+    <view class="hero-sub">回看自己的记录与进步。</view>
+  </view>
+
+  <view class="dark-card me-card">
+    <view class="me-total" bindtap="openStats">
+      <view>
+        <text class="label-dark me-total-label">累计训练</text>
+        <view class="me-total-value num">{{stats.totalDays || 0}}<text class="me-total-unit"> 天</text></view>
+      </view>
+      <image class="icon" src="/images/icons/chevron-right-white.svg" />
+    </view>
+    <view class="me-tiles">
+      <view class="dark-tile me-tile">
+        <text class="label-dark">连续记录</text>
+        <view class="me-tile-row"><view class="me-tile-value num">{{stats.streak || 0}}<text class="me-tile-unit"> 天</text></view><image class="icon-lg" src="/images/icons/flame-lime.svg" /></view>
+      </view>
+      <view class="dark-tile me-tile">
+        <text class="label-dark">本周训练</text>
+        <view class="me-tile-row"><view class="me-tile-value num">{{weekCount}}<text class="me-tile-unit"> 次</text></view><image class="icon-lg" src="/images/icons/bars-lime.svg" /></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <text class="section-title">本周训练统计</text>
+    <view class="section-link" bindtap="openStats">查看更多<image class="icon" src="/images/icons/chevron-right-grey.svg" /></view>
+  </view>
+  <view class="week-chart">
+    <view class="week-col" wx:for="{{week}}" wx:key="date">
+      <text class="week-count num">{{item.count}}</text>
+      <view class="week-bar-track"><view class="week-bar {{item.count ? 'on' : ''}}" style="height: {{item.count ? item.height : 8}}%"></view></view>
+      <text class="week-label {{item.isToday ? 'today' : ''}}">{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="list-card me-links">
+    <view class="list-row" bindtap="openHistory">
+      <image class="icon-lg" src="/images/icons/calendar-ink.svg" />
+      <view class="list-row-body"><view class="list-row-title">历史日历</view><view class="list-row-desc">查看每天的训练记录</view></view>
+      <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
+    </view>
+    <view class="list-row" bindtap="openStats">
+      <image class="icon-lg" src="/images/icons/stats-ink.svg" />
+      <view class="list-row-body"><view class="list-row-title">统计与个人纪录</view><view class="list-row-desc">查看训练数据和各项最佳成绩</view></view>
+      <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
+    </view>
+    <view class="list-row" bindtap="openWeight">
+      <image class="icon-lg" src="/images/icons/scale-ink.svg" />
+      <view class="list-row-body"><view class="list-row-title">体重与减脂参考</view><view class="list-row-desc">{{latestWeight ? '最近 ' + latestWeight.weight + ' kg · ' + latestWeight.date : '记录体重变化，获取减脂参考'}}</view></view>
+      <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
+    </view>
+    <view class="list-row" bindtap="openBackup">
+      <image class="icon-lg" src="/images/icons/save-ink.svg" />
+      <view class="list-row-body"><view class="list-row-title">数据备份</view><view class="list-row-desc">{{backupLabel}}</view></view>
+      <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
+    </view>
+  </view>
+</view>

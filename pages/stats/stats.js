@@ -1,119 +1,87 @@
 const util = require('../../utils/util.js');
+const progression = require('../../utils/progression.js');
+const view = require('../../utils/records-view.js');
+const ui = require('../../utils/ui-helpers.js');
+
+const SEGMENT_COLORS = ['#C8F76E', '#2A3236', '#8C8C88', '#B8B6B0', '#D9D7D1'];
 
 Page({
   data: {
-    stats: {
-      totalDays: 0,
-      restDays: 0,
-      planRecordedDays: 0,
-      totalExercises: 0,
-      completedExercises: 0,
-      uncompletedExercises: 0,
-      completionRate: 0,
-      streak: 0
-    },
-    distributionItems: [],
-    recentDays: [],
-    nutritionStats: []
+    stats: { totalDays: 0, restDays: 0, completedExercises: 0, completionRate: 0, streak: 0 },
+    ring: '',
+    week: [],
+    personalRecords: [],
+    topRecords: [],
+    distribution: []
   },
 
   onShow() {
-    this.syncCustomTabBar();
     this.loadStats();
-  },
-
-  syncCustomTabBar() {
-    if (typeof this.getTabBar !== 'function') {
-      return;
-    }
-
-    const tabBar = this.getTabBar();
-    if (!tabBar) {
-      return;
-    }
-
-    tabBar.setData({
-      selected: 4
-    });
   },
 
   loadStats() {
     const rawStats = util.getTrainingStats();
-    const distributionGroups = Array.isArray(rawStats.distributionGroups) ? rawStats.distributionGroups : [];
-    const maxCount = Math.max(...distributionGroups.map(item => item.count), 1);
-
-    const stats = {
-      ...rawStats,
-      restDays: rawStats.restDays || 0,
-      planRecordedDays: rawStats.planRecordedDays || ((rawStats.totalDays || 0) + (rawStats.restDays || 0)),
-      uncompletedExercises: rawStats.totalExercises - rawStats.completedExercises
-    };
-    const distributionItems = distributionGroups.map(item => ({
+    const groups = Array.isArray(rawStats.distributionGroups) ? rawStats.distributionGroups : [];
+    const total = groups.reduce((sum, item) => sum + item.count, 0);
+    const top = groups.slice(0, 4);
+    const rest = groups.slice(4).reduce((sum, item) => sum + item.count, 0);
+    const segments = top.map(item => ({ name: item.name, count: item.count }));
+    if (rest) segments.push({ name: '其他', count: rest });
+    const distribution = segments.map((item, index) => ({
       ...item,
-      percent: Math.round((item.count / maxCount) * 100)
+      percent: total ? Math.round((item.count / total) * 100) : 0,
+      color: SEGMENT_COLORS[index % SEGMENT_COLORS.length]
     }));
 
-    this.setData({
-      stats,
-      distributionItems
+    const recordsByDate = {};
+    util.getTrainingDates().forEach(date => {
+      const record = util.getTrainingRecord(date);
+      if (record) recordsByDate[date] = record;
     });
-    this.loadRecentDays();
-    this.loadNutritionStats();
+
+    this.setData({
+      stats: rawStats,
+      ring: view.ringSvg(rawStats.completionRate, true),
+      week: view.weekTrainingCounts(recordsByDate, util.getToday()),
+      distribution
+    });
+    this.loadPersonalRecords();
   },
 
-  loadRecentDays() {
-    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-    const recentDays = [];
-
-    for (let i = 6; i >= 0; i -= 1) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = util.formatDate(date);
-      const record = util.getTrainingRecord(dateStr);
-      const recordType = util.isRestRecord(record) ? 'rest' : (record ? 'training' : '');
-
-      recentDays.push({
-        date: dateStr,
-        day: date.getDate(),
-        weekDay: weekDays[date.getDay()],
-        hasRecord: !!record,
-        recordType
-      });
-    }
-
-    this.setData({ recentDays });
+  loadPersonalRecords() {
+    const records = util.getTrainingDates().map(date => util.getTrainingRecord(date)).filter(Boolean);
+    const names = {};
+    records.forEach(record => (record.exercises || []).forEach(exercise => {
+      const key = exercise.libraryId || exercise.id;
+      if (key && !names[key]) names[key] = exercise.name;
+    }));
+    const personalRecords = Object.keys(names).map(key => ({ key, name: names[key], ...progression.findPersonalRecords(records, key) }))
+      .filter(item => item.bestWeight || item.bestE1RM);
+    const topRecords = personalRecords
+      .slice()
+      .sort((a, b) => ((b.bestWeight && b.bestWeight.weight) || 0) - ((a.bestWeight && a.bestWeight.weight) || 0))
+      .slice(0, 5)
+      .map(item => ({
+        key: item.key,
+        name: item.name,
+        libraryId: /^\d{4}$/.test(item.key) ? item.key : '',
+        image: (ui.exerciseMedia(/^\d{4}$/.test(item.key) ? item.key : { name: item.name }) || {}).thumb || ui.equipmentImage(item.name),
+        weight: item.bestWeight ? item.bestWeight.weight : '—',
+        e1rm: item.bestE1RM ? item.bestE1RM.e1rm : '—'
+      }));
+    this.setData({ personalRecords, topRecords });
   },
 
-  loadNutritionStats() {
-    const nutritionStats = [];
-    let maxCalories = 0;
+  openHistory() {
+    wx.navigateTo({ url: '/pages/history/history' });
+  },
 
-    for (let i = 6; i >= 0; i -= 1) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = util.formatDate(date);
-      const foods = util.getNutritionRecords(dateStr);
+  openRecord(e) {
+    const id = e.currentTarget.dataset.libraryId;
+    if (id) wx.navigateTo({ url: `/packageExercise/pages/detail/detail?id=${id}` });
+  },
 
-      if (foods.length > 0) {
-        const total = util.calcDailyNutrition(foods);
-        if (total.calories > maxCalories) {
-          maxCalories = total.calories;
-        }
-        nutritionStats.push({
-          date: dateStr,
-          dateCN: `${date.getMonth() + 1}/${date.getDate()}`,
-          total,
-          calPercent: 0
-        });
-      }
-    }
-
-    if (maxCalories > 0) {
-      nutritionStats.forEach(item => {
-        item.calPercent = Math.round((item.total.calories / maxCalories) * 80);
-      });
-    }
-
-    this.setData({ nutritionStats });
+  openFatLossPage() {
+    wx.navigateTo({ url: '/pages/fatloss/fatloss' });
   }
 });

@@ -1,0 +1,58 @@
+<nav-bar back />
+<view class="page day">
+  <view class="hero">
+    <view class="hero-title day-title">{{title}}</view>
+    <view class="day-sub" wx:if="{{record && !isRest}}">{{dayName}} · 已完成 <text class="day-done num">{{summary.completed}}/{{summary.exerciseCount}}</text></view>
+    <view class="day-sub" wx:elif="{{record}}">{{dayName}} · {{record.restCompleted === false ? '未打卡' : '已打卡'}}</view>
+  </view>
+
+  <block wx:if="{{record && !isRest}}">
+    <view class="dark-card day-stats">
+      <view class="day-stat">
+        <text class="label-dark">总训练时长</text>
+        <view class="day-stat-value num">{{summary.durationMin || '—'}}<text class="day-stat-unit" wx:if="{{summary.durationMin}}"> 分钟</text></view>
+      </view>
+      <view class="day-stat">
+        <text class="label-dark">总训练量</text>
+        <view class="day-stat-value num">{{summary.volumeText}}<text class="day-stat-unit"> kg</text></view>
+      </view>
+    </view>
+
+    <view class="section-head">
+      <text class="section-title">训练内容</text>
+      <text class="section-meta">共 {{summary.exerciseCount}} 个动作 · {{summary.setCount}} 组</text>
+    </view>
+    <view class="day-ex" wx:for="{{summary.items}}" wx:key="key">
+      <view class="day-ex-head" bindtap="openExercise" data-library-id="{{item.libraryId}}">
+        <view class="day-ex-no num">{{index + 1}}</view>
+        <view class="day-ex-copy"><text class="day-ex-name">{{item.name}}</text><text class="day-ex-meta">{{item.meta}}</text></view>
+        <view class="tag lime day-pr" wx:if="{{item.isPR}}"><image class="icon-sm" src="/images/icons/trophy-ink.svg" />个人纪录</view>
+        <image class="chevron" wx:if="{{item.libraryId}}" src="/images/icons/chevron-right-grey.svg" />
+      </view>
+      <view class="day-sets">
+        <view class="day-set" wx:for="{{item.sets}}" wx:for-item="set" wx:key="label">
+          <text class="day-set-label">{{set.label}}</text>
+          <text class="day-set-value num {{set.done ? '' : 'muted'}}">{{set.value}}</text>
+          <image wx:if="{{set.isPR}}" class="icon-sm" src="/images/icons/star-lime.svg" />
+        </view>
+      </view>
+    </view>
+    <view class="day-foot">每次训练都在累积进步</view>
+  </block>
+
+  <block wx:elif="{{record}}">
+    <view class="dark-card day-rest">
+      <text class="label-dark">今日感受</text>
+      <view class="day-rest-feeling">{{record.feeling || '—'}}</view>
+      <view class="day-rest-note">{{record.note || '没有写备注'}}</view>
+      <image class="day-rest-moon" src="/images/icons/moon-white.svg" />
+    </view>
+  </block>
+
+  <view class="empty" wx:else>
+    <view class="empty-figure"><image class="icon-lg" src="/images/icons/calendar-ink.svg" /></view>
+    <view class="empty-title">这天没有记录</view>
+  </view>
+
+  <view class="day-delete" wx:if="{{record}}" bindtap="deleteRecord">删除这天的记录</view>
+</view>

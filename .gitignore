@@ -1,0 +1,3 @@
+# Downloaded source data and local skill staging are not application source.
+tmp-downloads/
+tmp-skill-build/

@@ -1,0 +1,30 @@
+.browse { padding-top: 8rpx; }
+
+.search { display: flex; align-items: center; gap: 18rpx; height: 92rpx; padding: 0 26rpx; border-radius: 22rpx; background: var(--surface-2); }
+.search-input { flex: 1; height: 92rpx; font-size: 30rpx; color: var(--text); }
+.search-clear { width: 36rpx; height: 36rpx; }
+
+.filters { white-space: nowrap; margin: 20rpx calc(-1 * var(--gutter)) 0; padding: 0 var(--gutter); width: auto; }
+.filters .chip { display: inline-flex; margin-right: 14rpx; min-width: 150rpx; height: 80rpx; border-radius: 16rpx; }
+.filters .chip.ink.active::after { bottom: 10rpx; }
+
+.result-row { display: flex; align-items: center; justify-content: space-between; margin: 30rpx 0 18rpx; }
+.result-count { font-size: 27rpx; color: var(--text-2); }
+.result-sort { display: flex; align-items: center; gap: 6rpx; font-size: 25rpx; color: var(--text); }
+
+.ex-row { display: flex; align-items: center; gap: 22rpx; padding: 18rpx 20rpx; margin-bottom: 14rpx; border-radius: 22rpx; background: var(--surface); border: 3rpx solid transparent; }
+.ex-row:active { background: #FAF9F6; }
+.ex-row.is-added { border-color: var(--lime); }
+.ex-thumb { width: 150rpx; height: 116rpx; flex-shrink: 0; }
+.ex-thumb.media { width: 124rpx; height: 124rpx; margin: 0 13rpx; border: 2rpx solid var(--line); }
+.ex-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10rpx; }
+.ex-name { font-size: 32rpx; font-weight: 800; color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ex-tags { display: flex; flex-wrap: wrap; gap: 10rpx; }
+.ex-meta { font-size: 24rpx; color: var(--text-2); }
+.ex-muscle { width: 80rpx; height: 130rpx; flex-shrink: 0; }
+.ex-add { width: 72rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ex-add-icon { width: 64rpx; height: 64rpx; }
+.ex-add-plus { width: 60rpx; height: 60rpx; border-radius: 50%; border: 3rpx solid var(--ink); display: flex; align-items: center; justify-content: center; }
+
+.list-hint { text-align: center; padding: 24rpx 0; font-size: 24rpx; color: var(--text-3); }
+.attribution { text-align: center; padding: 8rpx 0 24rpx; font-size: 22rpx; color: var(--text-3); }

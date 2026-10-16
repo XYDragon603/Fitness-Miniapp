@@ -1,0 +1,33 @@
+.w-card { display: flex; padding: 30rpx 32rpx; }
+.w-stat { position: relative; flex: 1.3; display: flex; flex-direction: column; gap: 4rpx; }
+.w-stat.side { flex: 1; padding-left: 30rpx; border-left: 2rpx solid var(--dark-line); }
+.w-value { font-size: 104rpx; line-height: 1.1; font-weight: 800; letter-spacing: -2rpx; }
+.w-unit { font-size: 32rpx; font-weight: 600; letter-spacing: 0; color: #D6DBDD; }
+.w-change { display: flex; align-items: center; gap: 8rpx; margin-top: 18rpx; font-size: 64rpx; font-weight: 800; }
+.w-change .down { color: var(--lime); }
+
+.w-chart-card { margin-top: 24rpx; padding: 28rpx 24rpx 16rpx; }
+.w-chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
+.w-ranges { display: flex; gap: 6rpx; padding: 4rpx; border-radius: 16rpx; background: var(--surface-2); }
+.w-range { padding: 8rpx 16rpx; border-radius: 12rpx; font-size: 22rpx; color: var(--text-2); }
+.w-range.active { background: var(--ink); color: #FFFFFF; font-weight: 700; }
+.w-chart { width: 100%; }
+.w-chart-empty { padding: 80rpx 0; text-align: center; font-size: 26rpx; color: var(--text-3); }
+
+.w-form { padding: 28rpx 26rpx; }
+.w-form-title { margin-bottom: 18rpx; }
+.w-form-row { display: flex; gap: 16rpx; }
+.w-form-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10rpx; }
+.w-field { min-height: 100rpx; }
+.w-note { font-size: 28rpx; font-weight: 500; }
+.w-save { margin-top: 24rpx; }
+
+.w-recent { padding: 28rpx 26rpx 12rpx; }
+.w-recent-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
+.w-row { display: flex; align-items: center; gap: 14rpx; padding: 22rpx 0; }
+.w-row + .w-row { border-top: 2rpx solid var(--line); }
+.w-row-date { font-size: 28rpx; font-weight: 700; }
+.w-row-meta { flex: 1; font-size: 22rpx; color: var(--text-3); }
+.w-row-weight { font-size: 34rpx; font-weight: 800; }
+.w-row-kg { font-size: 22rpx; color: var(--text-2); }
+.w-row-note { width: 150rpx; text-align: right; font-size: 23rpx; color: var(--text-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

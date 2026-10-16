@@ -1,0 +1,94 @@
+<nav-bar />
+<view class="page has-footer welcome">
+  <view class="w-top">
+    <view class="w-dots">
+      <view wx:for="{{[0, 1, 2, 3]}}" wx:key="*this" class="w-dot {{item <= step ? 'on' : ''}}"></view>
+    </view>
+    <text class="w-skip" bindtap="skip">跳过</text>
+  </view>
+
+  <!-- 1. 目标 -->
+  <block wx:if="{{step === 0}}">
+    <view class="hero">
+      <view class="hero-title">你想练成什么样？</view>
+      <view class="hero-sub">选一个最主要的目标，之后随时可以改。</view>
+    </view>
+    <view class="w-option dark-card" bindtap="chooseGoal" data-value="muscle">
+      <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />
+      <view class="w-option-copy"><text class="w-option-title">增肌</text><text class="w-option-desc">练出更多肌肉和力量</text></view>
+      <image class="w-option-image" src="/images/equipment/bench.png" mode="aspectFit" />
+    </view>
+    <view class="w-option dark-card" bindtap="chooseGoal" data-value="fatloss">
+      <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />
+      <view class="w-option-copy"><text class="w-option-title">减脂</text><text class="w-option-desc">保持力量的同时，温和地减脂</text></view>
+      <image class="w-option-image" src="/images/equipment/dumbbell.png" mode="aspectFit" />
+    </view>
+    <view class="w-option dark-card" bindtap="chooseGoal" data-value="health">
+      <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />
+      <view class="w-option-copy"><text class="w-option-title">保持健康</text><text class="w-option-desc">规律运动，精力更好</text></view>
+      <image class="w-option-image" src="/images/equipment/incline.png" mode="aspectFit" />
+    </view>
+  </block>
+
+  <!-- 2. 训练基础 -->
+  <block wx:elif="{{step === 1}}">
+    <view class="hero">
+      <view class="hero-title">你练过多久了？</view>
+      <view class="hero-sub">用来推荐合适强度的计划。</view>
+    </view>
+    <view class="w-level {{level === 'beginner' ? 'active' : ''}}" bindtap="chooseLevel" data-value="beginner">
+      <text class="w-level-title">刚开始</text>
+      <text class="w-level-desc">没怎么练过，或者停了很久</text>
+    </view>
+    <view class="w-level {{level === 'experienced' ? 'active' : ''}}" bindtap="chooseLevel" data-value="experienced">
+      <text class="w-level-title">练过一段时间</text>
+      <text class="w-level-desc">熟悉卧推、深蹲、划船这类基础动作</text>
+    </view>
+    <view class="w-back" bindtap="back">上一步</view>
+  </block>
+
+  <!-- 3. 基本信息 -->
+  <block wx:elif="{{step === 2}}">
+    <view class="hero">
+      <view class="hero-title">简单介绍一下自己</view>
+      <view class="hero-sub">用来估算每日营养参考，可以跳过。</view>
+    </view>
+    <view class="seg">
+      <view class="seg-item {{info.gender === 'male' ? 'active' : ''}}" bindtap="chooseGender" data-value="male">男</view>
+      <view class="seg-item {{info.gender === 'female' ? 'active' : ''}}" bindtap="chooseGender" data-value="female">女</view>
+    </view>
+    <view class="list-card w-info">
+      <view class="list-row"><text class="w-info-label">身高</text><input class="w-info-input num" type="digit" value="{{info.height}}" bindinput="onInfoInput" data-field="height" placeholder="170" placeholder-class="placeholder" /><text class="w-info-unit">cm</text></view>
+      <view class="list-row"><text class="w-info-label">体重</text><input class="w-info-input num" type="digit" value="{{info.weight}}" bindinput="onInfoInput" data-field="weight" placeholder="60" placeholder-class="placeholder" /><text class="w-info-unit">kg</text></view>
+      <view class="list-row"><text class="w-info-label">年龄</text><input class="w-info-input num" type="number" value="{{info.age}}" bindinput="onInfoInput" data-field="age" placeholder="25" placeholder-class="placeholder" /><text class="w-info-unit">岁</text></view>
+    </view>
+    <view class="w-back" bindtap="back">上一步</view>
+  </block>
+
+  <!-- 4. 推荐计划 -->
+  <block wx:else>
+    <view class="hero">
+      <view class="hero-title">给你推荐这个计划</view>
+      <view class="hero-sub">{{plan.reason}}</view>
+    </view>
+    <view class="dark-card w-plan">
+      <image class="deco" src="/images/ui/deco-lines.svg" mode="aspectFill" />
+      <text class="tag lime w-plan-badge">推荐</text>
+      <view class="w-plan-title">{{plan.title}}</view>
+      <view class="w-plan-meta num">{{plan.summary}}</view>
+      <image class="w-plan-image" src="{{plan.image}}" mode="aspectFit" />
+      <view class="w-plan-days">
+        <view class="w-plan-day" wx:for="{{plan.days}}" wx:key="id"><text class="w-plan-day-no">{{item.label}}</text><text class="w-plan-day-focus">{{item.focus}}</text></view>
+      </view>
+    </view>
+    <view class="w-note">之后可以在“计划”里换计划，或从动作库自己搭一个。</view>
+    <view class="w-back" bindtap="back">上一步</view>
+  </block>
+</view>
+
+<view class="footer-bar" wx:if="{{step === 2}}">
+  <view class="lime-btn" bindtap="showPlan"><text class="lime-btn-text">下一步</text><image class="icon" src="/images/icons/chevron-right-ink.svg" /></view>
+</view>
+<view class="footer-bar" wx:if="{{step === 3}}">
+  <view class="lime-btn" bindtap="finish"><image class="icon" src="/images/icons/play-ink.svg" />开始使用</view>
+</view>

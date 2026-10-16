@@ -1,315 +1,268 @@
-﻿<view class="container">
-  <view class="page-header air-record-header">
-    <view class="page-title">训练记录</view>
-    <view class="page-desc">{{today}} · {{isRestDay ? '记录今天的恢复状态和节奏' : '按当前计划记下今天的重量、次数与完成情况'}}</view>
-  </view>
+<page-meta background-color="{{isRestDay ? '#F6F4EE' : '#0E1416'}}" background-text-style="{{isRestDay ? 'dark' : 'light'}}" />
+<wxs module="ring">
+  // 倒计时圆环：根据剩余比例生成 SVG data URI
+  function uri(progress) {
+    var c = 879.65;
+    var p = progress > 1 ? 1 : (progress < 0 ? 0 : progress);
+    var offset = c * (1 - p);
+    var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320'>"
+      + "<circle cx='160' cy='160' r='140' fill='none' stroke='%232A3438' stroke-width='12'/>"
+      + "<circle cx='160' cy='160' r='140' fill='none' stroke='%23C8F76E' stroke-width='12' stroke-linecap='round' stroke-dasharray='" + c + "' stroke-dashoffset='" + offset + "' transform='rotate(-90 160 160)'/>"
+      + (p > 0 ? "<circle cx='160' cy='20' r='11' fill='%23C8F76E'/>" : "")
+      + "</svg>";
+    return "data:image/svg+xml;utf8," + svg;
+  }
+  module.exports = { uri: uri };
+</wxs>
 
-  <view class="session-summary card">
-    <view class="session-summary-top">
-      <view class="session-copy">
-        <text class="session-label">SESSION OVERVIEW</text>
-        <text class="session-day" wx:if="{{selectedDayDisplay}}">{{selectedDayDisplay}}</text>
-        <text class="session-day" wx:else>先选择今天的训练日</text>
+<!-- ========== 恢复日（浅色） ========== -->
+<block wx:if="{{isRestDay}}">
+  <nav-bar back />
+  <view class="page has-footer recovery">
+    <view class="hero">
+      <view class="hero-title">今天，认真恢复</view>
+      <view class="recovery-day">{{restDayLabel}}</view>
+      <view class="hero-sub">{{currentDayInfo.focus ? currentDayInfo.focus : '恢复也是训练的一部分。'}}</view>
+    </view>
+
+    <view class="dark-card recovery-card">
+      <view class="label-dark">今日状态</view>
+      <view class="recovery-card-title">休息日</view>
+      <view class="recovery-card-text">{{currentDayInfo.description || '给身体一点时间，让进步发生。'}}</view>
+      <view class="recovery-rings"></view>
+      <image class="recovery-moon" src="/images/icons/moon-white.svg" />
+    </view>
+
+    <view class="section-head"><text class="section-title">今天感觉如何？</text></view>
+    <view class="feelings">
+      <view class="feeling {{restForm.feeling === '精力不错' ? 'active' : ''}}" bindtap="onRestFeelingSelect" data-value="精力不错">
+        <image class="feeling-icon" src="/images/icons/smile-ink.svg" />
+        <text class="feeling-title">精力不错</text>
+        <text class="feeling-desc">状态良好\n可以继续保持</text>
       </view>
-      <view class="session-progress">
-        <text class="session-progress-value">{{progressPercent}}%</text>
-        <text class="session-progress-label">完成度</text>
+      <view class="feeling {{restForm.feeling === '有点疲劳' ? 'active' : ''}}" bindtap="onRestFeelingSelect" data-value="有点疲劳">
+        <image class="feeling-icon" src="/images/icons/neutral-ink.svg" />
+        <text class="feeling-title">有点疲劳</text>
+        <text class="feeling-desc">感觉有些累\n需要放松</text>
+      </view>
+      <view class="feeling {{restForm.feeling === '需要恢复' ? 'active' : ''}}" bindtap="onRestFeelingSelect" data-value="需要恢复">
+        <image class="feeling-icon" src="/images/icons/sad-ink.svg" />
+        <text class="feeling-title">需要恢复</text>
+        <text class="feeling-desc">身体疲惫\n需要更多休息</text>
       </view>
     </view>
 
-    <view class="session-pills">
-      <view class="session-pill">
-        <text class="session-pill-label">日期</text>
-        <text class="session-pill-value">{{today}}</text>
+    <view class="checkin">
+      <view class="checkin-copy">
+        <view class="checkin-title">完成休息打卡</view>
+        <view class="checkin-desc">记录本次休息日，纳入训练计划</view>
       </view>
-      <view class="session-pill">
-        <text class="session-pill-label">状态</text>
-        <text class="session-pill-value">{{sessionStatusText}}</text>
-      </view>
-      <view class="session-pill">
-        <text class="session-pill-label">进度</text>
-        <text class="session-pill-value">{{sessionProgressText}}</text>
-      </view>
+      <switch checked="{{restForm.restCompleted}}" bindchange="onRestCompletedChange" color="#C8F76E" />
     </view>
 
-    <text class="session-caption">记录的重点是稳定完成和持续追踪，不需要急于一次做得很满。</text>
-  </view>
-
-  <view class="day-selector">
-    <view class="selector-heading">
-      <text class="selector-label">选择训练日</text>
-      <text class="selector-note">根据当前启用的计划展示</text>
-    </view>
-
-    <view class="selector-options">
-      <view
-        wx:for="{{dayOptions}}"
-        wx:key="id"
-        class="selector-item {{selectedDayIndex === index ? 'active' : ''}}"
-        bindtap="selectDay"
-        data-index="{{index}}"
-        style="{{selectedDayIndex === index ? 'border-color:' + item.color + '; background: linear-gradient(135deg, ' + item.color + '12, #FFFFFF 70%);' : ''}}"
-      >
-        <view class="selector-main">
-          <view class="selector-icon-wrap" style="{{selectedDayIndex === index ? 'background:' + item.color + '18; color:' + item.color + ';' : ''}}">
-            <text class="selector-icon">{{item.icon}}</text>
-          </view>
-          <view class="selector-copy">
-            <text class="selector-name">{{item.name}}</text>
-            <view class="selector-state" style="{{selectedDayIndex === index ? 'color:' + item.color + ';' : ''}}">
-              <text wx:if="{{selectedDayIndex === index}}">{{item.type === 'rest' ? '当前正在记录恢复日' : '当前正在记录'}}</text>
-              <text wx:else>{{item.type === 'rest' ? '点击记录今天的恢复状态' : '点击选择该训练日'}}</text>
-            </view>
-          </view>
-        </view>
-        <view class="selector-arrow" style="{{selectedDayIndex === index ? 'color:' + item.color + ';' : ''}}">
-          <text wx:if="{{selectedDayIndex === index}}">已选</text>
-          <text wx:else>选择</text>
-        </view>
-      </view>
+    <view class="section-head"><text class="section-title">记录今天的拉伸或感受</text></view>
+    <view class="note-wrap">
+      <textarea class="textarea" value="{{restForm.note}}" maxlength="200" bindinput="onRestNoteInput" placeholder="例如：做了拉伸、泡沫轴放松、睡眠还不错……" placeholder-class="placeholder"></textarea>
+      <text class="note-count">{{restForm.note.length}}/200</text>
     </view>
   </view>
-
-  <view class="rest-checkin card" wx:if="{{isRestDay}}">
-    <view class="rest-checkin-header">
-      <text class="rest-checkin-title">今日为休息日 / 恢复日</text>
-      <text class="rest-checkin-subtitle">{{currentDayInfo.description || '恢复也是训练计划的一部分。今天可以轻松活动、拉伸或完全休息。'}}</text>
-    </view>
-
-    <view class="session-pills">
-      <view class="session-pill">
-        <text class="session-pill-label">当前计划</text>
-        <text class="session-pill-value">{{currentPlanTitle || '当前计划'}}</text>
-      </view>
-      <view class="session-pill">
-        <text class="session-pill-label">恢复重点</text>
-        <text class="session-pill-value">{{currentDayInfo.focus || '恢复 · 拉伸 · 放松'}}</text>
-      </view>
-    </view>
-
-    <view class="rest-switch-row">
-      <text class="rest-switch-label">完成休息打卡</text>
-      <switch checked="{{restForm.restCompleted}}" bindchange="onRestCompletedChange" color="{{currentDayColor}}" />
-    </view>
-
-    <view class="rest-feeling-group">
-      <text class="rest-section-label">今日感受</text>
-      <view class="rest-feeling-options">
-        <view class="rest-feeling-chip {{restForm.feeling === '精力不错' ? 'active' : ''}}" bindtap="onRestFeelingSelect" data-value="精力不错">精力不错</view>
-        <view class="rest-feeling-chip {{restForm.feeling === '有点疲劳' ? 'active' : ''}}" bindtap="onRestFeelingSelect" data-value="有点疲劳">有点疲劳</view>
-        <view class="rest-feeling-chip {{restForm.feeling === '需要恢复' ? 'active' : ''}}" bindtap="onRestFeelingSelect" data-value="需要恢复">需要恢复</view>
-      </view>
-    </view>
-
-    <view class="rest-note-group">
-      <text class="rest-section-label">简短备注</text>
-      <textarea class="rest-note-input" value="{{restForm.note}}" bindinput="onRestNoteInput" placeholder="记录今天的恢复状态、拉伸安排或感受"></textarea>
-    </view>
-
-    <view class="rest-hint-card">
-      <text class="rest-hint-text">{{currentDayInfo.note || '好好恢复，是为了下一次更稳定地训练。'}}</text>
-    </view>
+  <view class="footer-bar">
+    <view class="lime-btn" bindtap="saveRecord"><image class="icon" src="/images/icons/save-ink.svg" />{{hasExistingRecord ? '更新恢复记录' : '保存恢复记录'}}</view>
   </view>
+</block>
 
-  <view class="progress-section card" wx:if="{{exercises.length > 0}}">
-    <view class="progress-header">
-      <view class="progress-copy">
-        <text class="progress-label">会话完成度</text>
-        <text class="progress-subtitle">完成每组后可直接勾选，系统会自动统计本次训练进度。</text>
+<!-- ========== 训练（深色） ========== -->
+<block wx:else>
+  <view class="theme-dark workout">
+    <nav-bar back dark title="训练中" />
+
+    <!-- 还没选训练日 -->
+    <view class="page" wx:if="{{selectedDayIndex < 0}}">
+      <view class="hero"><view class="hero-title">选择今天的训练</view><view class="hero-sub">{{currentPlanTitle}}</view></view>
+      <view class="pick-day dark-tile" wx:for="{{dayOptions}}" wx:key="id" bindtap="selectDay" data-index="{{index}}">
+        <text class="pick-day-index num">{{index + 1}}</text>
+        <text class="pick-day-name">{{item.name}}</text>
+        <image class="chevron" src="/images/icons/chevron-right-grey.svg" />
       </view>
-      <text class="progress-value">{{completedCount}} / {{exercises.length}}</text>
     </view>
-    <view class="progress-bar">
-      <view class="progress-fill" style="width: {{progressPercent}}%;"></view>
-    </view>
-  </view>
 
-  <view class="exercise-record-list" wx:if="{{exercises.length > 0}}">
-    <view wx:for="{{exercises}}" wx:key="id" class="exercise-record-card card {{item.completed ? 'completed' : ''}}">
-      <view class="record-top" style="background: linear-gradient(135deg, {{currentDayColor}}12, #FFFFFF 68%);">
-        <view class="record-main">
-          <view class="record-chip-row">
-            <text class="record-order" style="background: {{currentDayColor}}18; color: {{currentDayColor}};">{{index + 1}}</text>
-            <text class="record-chip">{{item.planSets}} 组</text>
-            <text class="record-chip">{{item.planReps}}</text>
-            <text class="record-chip" wx:if="{{item.targetPart}}">{{item.targetPart}}</text>
-          </view>
-          <text class="record-name">{{item.name}}</text>
-          <text class="record-subtitle">按计划填写重量和次数，完成后勾选即可。</text>
+    <block wx:for="{{exercises}}" wx:key="id" wx:if="{{index === currentExIndex}}">
+      <view class="page has-footer">
+        <view class="progress-row" bindtap="chooseExercise">
+          <text class="progress-count num"><text class="progress-current">{{currentExIndex + 1}}</text> / {{exercises.length}}</text>
+          <view class="bar dark progress-track"><view class="bar-fill" style="width: {{progressPercent}}%"></view></view>
         </view>
 
-        <view class="complete-toggle {{item.completed ? 'checked' : ''}}" bindtap="toggleComplete" data-index="{{index}}">
-          <text wx:if="{{item.completed}}">✓</text>
-        </view>
-      </view>
-
-      <view class="record-meta" wx:if="{{item.previousSummary || item.guide || item.overloadSuggestion.show}}">
-        <view class="previous-summary" wx:if="{{item.previousSummary}}">
-          <view class="summary-row">
-            <text class="summary-label">上次表现</text>
-            <text class="summary-date" wx:if="{{item.previousDate}}">{{item.previousDate}}</text>
+        <view class="ex-head">
+          <view class="ex-copy">
+            <view class="ex-name">{{item.name}}</view>
+            <view class="ex-plan num">{{item.repsLabel}}</view>
+            <view class="ex-last num" wx:if="{{item.previousBestLabel}}">上次 {{item.previousBestLabel}}</view>
           </view>
-          <text class="summary-text">{{item.previousSummary}}</text>
+          <image wx:if="{{item.gif}}" class="ex-image ex-gif media" src="{{item.gif}}" mode="aspectFit" binderror="onExerciseMediaError" data-index="{{index}}" />
+          <image wx:else class="ex-image" src="{{item.image}}" mode="aspectFit" />
         </view>
 
-        <view class="record-actions" wx:if="{{item.previousSummary || item.guide}}">
-          <view wx:if="{{item.previousSummary}}" class="action-chip" bindtap="copyLastWeight" data-index="{{index}}">
-            复制上次重量
+        <view class="ex-actions">
+          <view class="dark-btn ex-action" bindtap="openCurrentGuide">
+            <image class="icon" src="/images/icons/play-circle-white.svg" /><text class="ex-action-text">查看教学</text><image class="icon-sm" src="/images/icons/chevron-right-grey.svg" />
           </view>
-          <view wx:if="{{item.guide}}" class="action-chip ghost" bindtap="openGuide" data-index="{{index}}">
-            查看教学
+          <view class="dark-btn ex-action" bindtap="copyCurrentLast">
+            <image class="icon" src="/images/icons/copy-white.svg" /><text class="ex-action-text">复制上次</text><image class="icon-sm" src="/images/icons/chevron-right-grey.svg" />
           </view>
         </view>
 
-        <view class="suggestion-banner" wx:if="{{item.overloadSuggestion.show}}">
-          <text class="suggestion-title">渐进超负荷提醒</text>
-          <text class="suggestion-text">{{item.overloadSuggestion.message}}</text>
+        <view class="sets-head">
+          <text class="col-set">组</text><text class="col-step">重量（kg）</text><text class="col-step">次数</text><text class="col-done">完成</text>
         </view>
-      </view>
-
-      <view class="sets-shell">
-        <view class="sets-container">
-          <view class="sets-header">
-            <text class="sets-col col-set">组</text>
-            <text class="sets-col col-weight">重量(kg)</text>
-            <text class="sets-col col-reps">次数</text>
-            <text class="sets-col col-done">完成</text>
+        <view
+          wx:for="{{item.sets}}" wx:for-item="set" wx:for-index="setIndex" wx:key="setIndex"
+          class="set-row {{setIndex === item.activeSetIndex ? 'is-current' : ''}} {{set.done ? 'is-done' : ''}}"
+        >
+          <text class="col-set set-no num">{{setIndex + 1}}</text>
+          <view class="col-step stepper">
+            <view class="step-btn" bindtap="stepValue" data-ex-index="{{index}}" data-set-index="{{setIndex}}" data-field="weight" data-delta="-1"><image class="icon-sm" src="/images/icons/minus-white.svg" /></view>
+            <input class="step-input num" type="digit" value="{{set.weight}}" placeholder="{{set.weightHint || '0'}}" placeholder-class="step-placeholder" bindinput="onWeightInput" data-ex-index="{{index}}" data-set-index="{{setIndex}}" />
+            <view class="step-btn" bindtap="stepValue" data-ex-index="{{index}}" data-set-index="{{setIndex}}" data-field="weight" data-delta="1"><image class="icon-sm" src="/images/icons/plus-white.svg" /></view>
           </view>
-          <view wx:for="{{item.sets}}" wx:key="index" wx:for-item="set" wx:for-index="setIndex" class="set-row">
-            <text class="sets-col col-set set-number">{{setIndex + 1}}</text>
-            <view class="sets-col col-weight">
-              <view class="set-control-stack">
-                <picker
-                  wx:if="{{set.weightInputMode !== 'input'}}"
-                  mode="selector"
-                  range="{{set.weightOptions}}"
-                  bindchange="onWeightOptionChange"
-                  data-ex-index="{{index}}"
-                  data-set-index="{{setIndex}}"
-                >
-                  <view class="set-picker {{set.weight ? 'selected' : ''}}">{{set.weight || '选择'}}</view>
-                </picker>
-                <input wx:else class="set-input" type="digit" placeholder="0" value="{{set.weight}}" bindinput="onWeightInput" data-ex-index="{{index}}" data-set-index="{{setIndex}}" />
-                <view class="set-mode-toggle" bindtap="toggleWeightInputMode" data-ex-index="{{index}}" data-set-index="{{setIndex}}">
-                  {{set.weightInputMode === 'input' ? '选项' : '手动'}}
-                </view>
-              </view>
-            </view>
-            <view class="sets-col col-reps">
-              <view class="set-control-stack">
-                <picker
-                  wx:if="{{item.repsOptions.length > 0 && set.repsInputMode !== 'input'}}"
-                  mode="selector"
-                  range="{{item.repsOptions}}"
-                  bindchange="onRepsOptionChange"
-                  data-ex-index="{{index}}"
-                  data-set-index="{{setIndex}}"
-                >
-                  <view class="set-picker {{set.reps ? 'selected' : ''}}">{{set.reps || '选择'}}</view>
-                </picker>
-                <input wx:else class="set-input" type="number" placeholder="0" value="{{set.reps}}" bindinput="onRepsInput" data-ex-index="{{index}}" data-set-index="{{setIndex}}" />
-                <view wx:if="{{item.repsOptions.length > 0}}" class="set-mode-toggle" bindtap="toggleRepsInputMode" data-ex-index="{{index}}" data-set-index="{{setIndex}}">
-                  {{set.repsInputMode === 'input' ? '选项' : '手动'}}
-                </view>
-              </view>
-            </view>
-            <view class="sets-col col-done">
-              <view class="set-check {{set.done ? 'checked' : ''}}" bindtap="toggleSetDone" data-ex-index="{{index}}" data-set-index="{{setIndex}}">
-                <text wx:if="{{set.done}}">✓</text>
-              </view>
-            </view>
+          <view class="col-step stepper">
+            <view class="step-btn" bindtap="stepValue" data-ex-index="{{index}}" data-set-index="{{setIndex}}" data-field="reps" data-delta="-1"><image class="icon-sm" src="/images/icons/minus-white.svg" /></view>
+            <input class="step-input num" type="number" value="{{set.reps}}" placeholder="0" placeholder-class="step-placeholder" bindinput="onRepsInput" data-ex-index="{{index}}" data-set-index="{{setIndex}}" />
+            <view class="step-btn" bindtap="stepValue" data-ex-index="{{index}}" data-set-index="{{setIndex}}" data-field="reps" data-delta="1"><image class="icon-sm" src="/images/icons/plus-white.svg" /></view>
+          </view>
+          <view class="col-done" bindtap="toggleSetDone" data-ex-index="{{index}}" data-set-index="{{setIndex}}">
+            <image wx:if="{{set.done}}" class="done-icon" src="/images/icons/check-circle-lime.svg" />
+            <view wx:else class="done-ring"></view>
           </view>
         </view>
       </view>
 
-      <view class="record-tip" wx:if="{{item.note}}">
-        <text class="tip-label">训练提示</text>
-        <text class="tip-text">{{item.note}}</text>
+      <view class="footer-bar dark">
+        <view class="lime-btn" bindtap="completeCurrentSet">
+          <text class="lime-btn-text">{{item.completed ? (completedCount === exercises.length ? '完成训练' : '下一个动作') : '完成这一组'}}</text>
+          <image class="icon" src="/images/icons/chevron-right-ink.svg" />
+        </view>
+      </view>
+    </block>
+
+    <view class="page" wx:if="{{selectedDayIndex >= 0 && exercises.length === 0}}">
+      <view class="empty">
+        <view class="empty-figure dark-fig"><image class="icon-lg" src="/images/icons/dumbbell-white.svg" /></view>
+        <view class="empty-title on-dark">这一天还没有动作</view>
+        <view class="empty-text on-dark">去计划里添加动作后再开始训练。</view>
       </view>
     </view>
   </view>
 
-  <view class="empty-state record-empty" wx:if="{{selectedDayIndex < 0}}">
-    <text class="empty-icon">🏋</text>
-    <text class="empty-title">先选择今天的训练日</text>
-    <text class="empty-text">选中后就可以继续记录每组重量、次数、完成状态和休息节奏。</text>
-  </view>
-
-  <view class="save-section" wx:if="{{isRestDay}}">
-    <view class="btn-success save-btn" bindtap="saveRecord">保存休息记录</view>
-  </view>
-
-  <view class="save-section" wx:if="{{!isRestDay && exercises.length > 0}}">
-    <view class="btn-success save-btn" bindtap="saveRecord">保存训练记录</view>
-  </view>
-
-  <view class="modal-mask guide-mask" wx:if="{{guideVisible}}" bindtap="closeGuide">
-    <view class="guide-modal" catchtap="noop">
-      <view class="guide-modal-header">
-        <view class="guide-title-wrap">
-          <text class="guide-caption">动作教学</text>
-          <text class="guide-title">{{activeGuide.exerciseName}}</text>
-        </view>
-        <view class="guide-close" bindtap="closeGuide">关闭</view>
-      </view>
-
-      <view class="guide-section">
-        <text class="guide-section-title">动作说明</text>
-        <text class="guide-summary">{{activeGuide.summary}}</text>
-      </view>
-
-      <view class="guide-section" wx:if="{{activeGuide.targetMuscles.length}}">
-        <text class="guide-section-title">目标肌群</text>
-        <view class="guide-list">
-          <view wx:for="{{activeGuide.targetMuscles}}" wx:key="*this" class="guide-list-item">
-            <text class="guide-bullet">•</text>
-            <text class="guide-list-text">{{item}}</text>
-          </view>
+  <!-- ========== 组间休息 ========== -->
+  <view class="overlay theme-dark" wx:if="{{restTimerVisible}}" bindlongpress="noop">
+    <nav-bar back dark title="组间休息" customBack bind:back="skipRestTimer" />
+    <view class="page rest">
+      <view class="rest-caption" wx:if="{{restCaption}}">{{restTimerExerciseName}} · 第 <text class="lime-text">{{restCaptionDone}}</text> / {{exercises[currentExIndex].sets.length}} 组已完成</view>
+      <view class="rest-ring">
+        <image class="rest-ring-img" src="{{ring.uri(restProgress)}}" />
+        <view class="rest-ring-center">
+          <text class="rest-ring-label">{{restTimerFinished ? '休息结束' : '组间休息'}}</text>
+          <text class="rest-ring-time num" wx:if="{{!restTimerFinished}}">{{restTimerLabel}}</text>
+          <text class="rest-ring-time done" wx:else>开始下一组</text>
+          <block wx:if="{{restNext}}">
+            <text class="rest-ring-next-label">下一组</text>
+            <text class="rest-ring-next num">{{restNext.label}}</text>
+          </block>
         </view>
       </view>
 
-      <view class="guide-section" wx:if="{{activeGuide.commonMistakes.length}}">
-        <text class="guide-section-title">常见错误</text>
-        <view class="guide-list">
-          <view wx:for="{{activeGuide.commonMistakes}}" wx:key="*this" class="guide-list-item">
-            <text class="guide-bullet">•</text>
-            <text class="guide-list-text">{{item}}</text>
-          </view>
+      <view class="rest-actions">
+        <view class="rest-action" bindtap="adjustRestTimer" data-delta="-15"><image class="icon-xl" src="/images/icons/minus-white.svg" /><text>-15 秒</text></view>
+        <view class="rest-action" bindtap="adjustRestTimer" data-delta="15"><image class="icon-xl" src="/images/icons/plus-white.svg" /><text>+15 秒</text></view>
+        <view class="rest-action" bindtap="skipRestTimer"><image class="icon-xl" src="/images/icons/skip-white.svg" /><text>{{restTimerFinished ? '开始下一组' : '跳过休息'}}</text></view>
+      </view>
+
+      <view class="section-head rest-head"><text class="rest-head-title">快捷设置</text><text class="section-meta">长按可设为默认</text></view>
+      <view class="presets">
+        <view wx:for="{{restPresets}}" wx:key="*this" class="preset {{restDefaultSec === item ? 'active' : ''}}" bindtap="pickRestPreset" bindlongpress="saveRestPreset" data-seconds="{{item}}">
+          <text class="preset-num num">{{item}}</text><text class="preset-unit">秒</text>
         </view>
       </view>
 
-      <view class="guide-section" wx:if="{{activeGuide.tips.length}}">
-        <text class="guide-section-title">注意事项</text>
-        <view class="guide-list">
-          <view wx:for="{{activeGuide.tips}}" wx:key="*this" class="guide-list-item">
-            <text class="guide-bullet">•</text>
-            <text class="guide-list-text">{{item}}</text>
-          </view>
+      <view class="rest-next dark-tile" wx:if="{{restNext}}">
+        <view class="rest-next-copy">
+          <text class="label-dark">下一组</text>
+          <text class="rest-next-name">{{restNext.name}}</text>
+          <text class="rest-next-meta num">{{restNext.label}}</text>
         </view>
-      </view>
-
-      <view class="guide-video-card">
-        <text class="guide-section-title">教学链接</text>
-        <text class="guide-video-title">{{activeGuide.videoTitle}}</text>
-        <text class="guide-video-url" wx:if="{{activeGuide.videoUrl}}" selectable="true">{{activeGuide.videoUrl}}</text>
-        <view class="guide-video-action" wx:if="{{activeGuide.videoUrl}}" bindtap="copyGuideVideoUrl">复制教学链接</view>
+        <image class="rest-next-image {{restNext.isMedia ? 'media small' : ''}}" src="{{restNext.image}}" mode="aspectFit" />
       </view>
     </view>
   </view>
 
-  <view class="modal-mask rest-timer-mask" wx:if="{{restTimerVisible}}">
-    <view class="rest-timer-card" catchtap="noop">
-      <text class="rest-timer-caption">组间休息</text>
-      <text class="rest-timer-title">{{restTimerExerciseName}}</text>
-      <text class="rest-timer-count">{{restTimerLabel}}</text>
-      <text class="rest-timer-hint">建议休息 60-90 秒，可根据当下状态灵活调整。</text>
-      <view class="rest-timer-actions">
-        <view class="btn-secondary rest-action-btn" bindtap="closeRestTimer">关闭</view>
-        <view class="btn-secondary rest-action-btn" bindtap="restartRestTimer">重新开始</view>
-        <view class="btn-primary rest-action-btn" bindtap="skipRestTimer">跳过</view>
+  <!-- ========== 下一组目标 ========== -->
+  <view class="overlay theme-dark" wx:if="{{targetView}}">
+    <nav-bar back dark title="下一组目标" customBack bind:back="dismissTargetView" />
+    <view class="page has-footer target">
+      <view class="ex-head">
+        <view class="ex-copy">
+          <view class="ex-name">{{targetView.name}}</view>
+          <view class="ex-plan num">{{targetView.repsLabel}}</view>
+        </view>
+        <image class="ex-image {{targetView.isMedia ? 'ex-gif media' : ''}}" src="{{targetView.image}}" mode="aspectFit" />
       </view>
+
+      <view class="compare">
+        <view class="compare-card dark-tile">
+          <text class="label-dark">上次训练</text>
+          <view class="compare-value num" wx:if="{{targetView.previous}}">{{targetView.previous.weight}}<text class="unit"> kg</text> × {{targetView.previous.reps}}</view>
+          <view class="compare-value muted" wx:else>首次</view>
+          <text class="compare-date num">{{targetView.previous ? targetView.previous.date : '暂无记录'}}</text>
+        </view>
+        <image class="compare-arrow" src="/images/icons/arrow-right-grey.svg" />
+        <view class="compare-card dark-tile is-now">
+          <view class="compare-label-row"><text class="compare-now-label">本次完成</text><image class="icon" src="/images/icons/check-circle-lime.svg" /></view>
+          <view class="compare-value num" wx:if="{{targetView.current}}">{{targetView.current.isBodyweight ? '自重' : targetView.current.weight}}<text class="unit" wx:if="{{!targetView.current.isBodyweight}}"> kg</text> × {{targetView.current.reps}}</view>
+          <text class="compare-date num">{{targetView.current ? targetView.current.date : ''}}</text>
+        </view>
+      </view>
+
+      <view class="suggest">
+        <view class="suggest-head"><image class="icon" src="/images/icons/bars-lime.svg" /><text>下次建议</text></view>
+        <view class="suggest-value num" wx:if="{{targetView.suggestion.show}}">
+          <block wx:if="{{!targetView.suggestion.isBodyweight}}">{{targetView.suggestion.weight}}<text class="suggest-unit"> kg</text><text class="suggest-x"> × </text></block>{{targetView.suggestion.reps}}<text class="suggest-unit"> 次</text>
+        </view>
+        <view class="suggest-text">{{targetView.suggestion.message || '先按计划完成，系统会根据成绩给出建议。'}}</view>
+      </view>
+
+      <view class="pr dark-tile" wx:if="{{targetView.pr}}">
+        <image class="pr-icon" src="/images/icons/crown-lime.svg" />
+        <view class="pr-copy"><text class="pr-title">个人纪录</text><text class="pr-desc">{{targetView.name}} 单组最大重量</text></view>
+        <view class="pr-value">
+          <text class="pr-gain num" wx:if="{{targetView.pr.gain}}">+{{targetView.pr.gain}}<text class="pr-unit"> kg</text> ↑</text>
+          <text class="pr-new num">新纪录：{{targetView.pr.weight}} kg</text>
+        </view>
+      </view>
+    </view>
+    <view class="footer-bar dark">
+      <view class="dark-btn" bindtap="keepCurrentTarget">保持当前重量</view>
+      <view class="lime-btn compact target-adopt" bindtap="adoptNextTarget">采用建议</view>
     </view>
   </view>
 
-  <view class="page-spacer"></view>
-</view>
+  <!-- ========== 动作教学 ========== -->
+  <view class="sheet-mask" wx:if="{{guideVisible}}" bindtap="closeGuide">
+    <view class="sheet dark" catchtap="noop">
+      <view class="sheet-handle"></view>
+      <view class="sheet-head">
+        <view><view class="sheet-title">{{activeGuide.exerciseName}}</view><view class="sheet-sub">动作教学</view></view>
+        <image class="sheet-close" src="/images/icons/close-white.svg" bindtap="closeGuide" />
+      </view>
+      <view class="guide-block"><view class="guide-title">动作说明</view><view class="guide-text">{{activeGuide.summary}}</view></view>
+      <view class="guide-block" wx:if="{{activeGuide.targetMuscles.length}}"><view class="guide-title">目标肌群</view><view class="guide-chips"><text class="tag ink guide-chip" wx:for="{{activeGuide.targetMuscles}}" wx:key="*this">{{item}}</text></view></view>
+      <view class="guide-block" wx:if="{{activeGuide.commonMistakes.length}}"><view class="guide-title">常见错误</view><view class="guide-text" wx:for="{{activeGuide.commonMistakes}}" wx:key="*this">· {{item}}</view></view>
+      <view class="guide-block" wx:if="{{activeGuide.tips.length}}"><view class="guide-title">注意事项</view><view class="guide-text" wx:for="{{activeGuide.tips}}" wx:key="*this">· {{item}}</view></view>
+      <view class="guide-block" wx:if="{{activeGuide.videoUrl}}">
+        <view class="guide-title">教学链接</view>
+        <view class="guide-text">{{activeGuide.videoTitle}}</view>
+        <view class="dark-btn guide-copy" bindtap="copyGuideVideoUrl">复制教学链接</view>
+      </view>
+    </view>
+  </view>
+</block>

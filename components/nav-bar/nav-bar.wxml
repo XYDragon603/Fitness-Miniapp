@@ -1,0 +1,12 @@
+<view class="nav {{dark ? 'is-dark' : ''}}" style="padding-top: {{statusBarHeight}}px;">
+  <view class="nav-row" style="height: {{navHeight}}px; padding-right: {{capsuleWidth}}px;">
+    <view wx:if="{{back}}" class="nav-back" bindtap="onBack" aria-role="button" aria-label="返回">
+      <image class="nav-back-icon" src="/images/icons/chevron-left-{{dark ? 'white' : 'ink'}}.svg" />
+    </view>
+    <view class="nav-title-wrap {{align === 'center' ? 'is-center' : ''}}" wx:if="{{title}}" style="{{align === 'center' ? 'left: ' + capsuleWidth + 'px; right: ' + capsuleWidth + 'px;' : ''}}">
+      <text class="nav-title">{{title}}</text>
+      <text class="nav-subtitle" wx:if="{{subtitle}}">{{subtitle}}</text>
+    </view>
+  </view>
+</view>
+<view class="nav-spacer" style="height: {{statusBarHeight + navHeight}}px;"></view>

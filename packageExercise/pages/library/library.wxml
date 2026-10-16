@@ -1,0 +1,59 @@
+<nav-bar back align="center" title="{{mode === 'pick' ? '选择动作' : '浏览动作'}}" subtitle="{{mode === 'pick' ? dayLabel : ''}}" />
+<view class="page {{mode === 'pick' ? 'has-footer' : ''}} browse">
+  <view class="search">
+    <image class="icon" src="/images/icons/search-ink.svg" />
+    <input class="search-input" value="{{keyword}}" placeholder="{{mode === 'pick' ? '搜索动作，支持拼音' : '搜索动作、肌群或器械，支持拼音'}}" placeholder-class="placeholder" confirm-type="search" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
+    <image wx:if="{{keyword}}" class="icon search-clear" src="/images/icons/clear-circle-grey.svg" bindtap="clearKeyword" />
+  </view>
+
+  <scroll-view class="filters" scroll-x enhanced show-scrollbar="{{false}}">
+    <view wx:for="{{bodyParts}}" wx:key="key" class="chip ink {{bodyPart === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="onBodyPartTap">{{item.label}}</view>
+  </scroll-view>
+  <scroll-view class="filters" scroll-x enhanced show-scrollbar="{{false}}">
+    <view wx:for="{{equipmentGroups}}" wx:key="key" class="chip ink {{equipmentGroup === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="onEquipmentTap">{{item.label}}</view>
+  </scroll-view>
+
+  <view class="result-row">
+    <text class="result-count">找到 {{total}} 个动作</text>
+    <view class="result-sort" bindtap="onSortTap">{{sortMode === 'name' ? '按名称排序' : '默认排序'}}<image class="icon-sm" src="/images/icons/chevron-down-ink.svg" /></view>
+  </view>
+
+  <view
+    wx:for="{{items}}" wx:key="id"
+    class="ex-row {{item.added ? 'is-added' : ''}}"
+    data-id="{{item.id}}" bindtap="onExerciseTap"
+  >
+    <image class="ex-thumb {{item.thumb ? 'media' : ''}}" src="{{item.thumb || item.image}}" mode="aspectFit" lazy-load binderror="onThumbError" data-index="{{index}}" />
+    <view class="ex-copy">
+      <text class="ex-name">{{item.name}}</text>
+      <block wx:if="{{mode === 'pick'}}">
+        <text class="ex-meta">{{item.meta}}</text>
+        <text class="ex-meta">{{item.equipmentLabel}}  |  3 组 × 10-12 次</text>
+      </block>
+      <view class="ex-tags" wx:else>
+        <text class="tag ink">{{item.bodyShort}}</text>
+        <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+      </view>
+    </view>
+    <block wx:if="{{mode === 'pick'}}">
+      <image class="ex-muscle" src="{{item.muscle}}" mode="aspectFit" lazy-load />
+      <view class="ex-add" data-id="{{item.id}}" catchtap="onAddTap">
+        <image wx:if="{{item.added}}" class="ex-add-icon" src="/images/icons/check-circle-lime.svg" />
+        <view wx:else class="ex-add-plus"><image class="icon" src="/images/icons/plus-ink.svg" /></view>
+      </view>
+    </block>
+    <image wx:else class="chevron" src="/images/icons/chevron-right-grey.svg" />
+  </view>
+
+  <view wx:if="{{!total}}" class="empty">
+    <view class="empty-figure"><image class="icon-lg" src="/images/icons/search-grey.svg" /></view>
+    <view class="empty-title">没有找到相关动作</view>
+    <view class="empty-text">试试其他关键词，或调整筛选条件</view>
+    <view class="soft-btn empty-action" bindtap="clearFilters">清除筛选</view>
+  </view>
+  <view wx:if="{{hasMore}}" class="list-hint">继续下滑，查看更多动作</view>
+  <view class="attribution">{{attribution}}</view>
+</view>
+<view wx:if="{{mode === 'pick'}}" class="footer-bar">
+  <view class="lime-btn" bindtap="finishPick"><text class="lime-btn-text">完成（已选 {{selectedCount}}）</text><image class="icon" src="/images/icons/chevron-right-ink.svg" /></view>
+</view>

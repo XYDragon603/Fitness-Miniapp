@@ -1,57 +1,86 @@
 {
   "pages": [
+    "pages/today/today",
+    "pages/library/library",
     "pages/index/index",
+    "pages/nutrition/nutrition",
+    "pages/me/me",
     "pages/record/record",
     "pages/history/history",
-    "pages/nutrition/nutrition",
-    "pages/stats/stats"
+    "pages/stats/stats",
+    "pages/fatloss/fatloss",
+    "pages/history/day",
+    "pages/weight/weight",
+    "pages/welcome/welcome",
+    "pages/backup/backup"
   ],
   "window": {
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#F4F8F7",
+    "navigationBarBackgroundColor": "#F6F4EE",
     "navigationBarTitleText": "健行计划",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#F4F8F7"
+    "navigationStyle": "custom",
+    "backgroundColor": "#F6F4EE"
   },
   "tabBar": {
     "custom": true,
-    "color": "#64727D",
-    "selectedColor": "#C96565",
+    "color": "#5D6366",
+    "selectedColor": "#111517",
     "backgroundColor": "#FFFFFF",
-    "borderStyle": "black",
+    "borderStyle": "white",
     "list": [
       {
-        "pagePath": "pages/index/index",
-        "text": "训练计划",
-        "iconPath": "images/plan.png",
-        "selectedIconPath": "images/plan-active.png"
+        "pagePath": "pages/today/today",
+        "text": "今天",
+        "iconPath": "images/tab-today.png",
+        "selectedIconPath": "images/tab-today-active.png"
       },
       {
-        "pagePath": "pages/record/record",
-        "text": "训练记录",
-        "iconPath": "images/record.png",
-        "selectedIconPath": "images/record-active.png"
+        "pagePath": "pages/library/library",
+        "text": "动作库",
+        "iconPath": "images/tab-library.png",
+        "selectedIconPath": "images/tab-library-active.png"
+      },
+      {
+        "pagePath": "pages/index/index",
+        "text": "计划",
+        "iconPath": "images/tab-plan.png",
+        "selectedIconPath": "images/tab-plan-active.png"
       },
       {
         "pagePath": "pages/nutrition/nutrition",
-        "text": "营养记录",
-        "iconPath": "images/food.png",
-        "selectedIconPath": "images/food-active.png"
+        "text": "饮食",
+        "iconPath": "images/tab-diet.png",
+        "selectedIconPath": "images/tab-diet-active.png"
       },
       {
-        "pagePath": "pages/history/history",
-        "text": "历史记录",
-        "iconPath": "images/history.png",
-        "selectedIconPath": "images/history-active.png"
-      },
-      {
-        "pagePath": "pages/stats/stats",
-        "text": "数据统计",
-        "iconPath": "images/stats.png",
-        "selectedIconPath": "images/stats-active.png"
+        "pagePath": "pages/me/me",
+        "text": "我的",
+        "iconPath": "images/tab-me.png",
+        "selectedIconPath": "images/tab-me-active.png"
       }
     ]
   },
+  "subpackages": [
+    {
+      "root": "packageExercise",
+      "pages": [
+        "pages/library/library",
+        "pages/detail/detail"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": [
+        "packageExercise"
+      ]
+    }
+  },
   "sitemapLocation": "sitemap.json",
-  "style": "v2"
+  "style": "v2",
+  "usingComponents": {
+    "nav-bar": "/components/nav-bar/nav-bar"
+  }
 }

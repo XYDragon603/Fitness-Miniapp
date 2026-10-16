@@ -1,0 +1,36 @@
+.today-card { padding: 36rpx 34rpx 34rpx; }
+.today-card-top { position: relative; display: flex; align-items: center; justify-content: space-between; }
+.today-switch { display: flex; align-items: center; gap: 2rpx; font-size: 24rpx; color: var(--dark-text-2); padding: 6rpx 0 6rpx 20rpx; }
+.today-card-body { position: relative; display: flex; align-items: flex-end; min-height: 200rpx; }
+.today-card-copy { flex: 1; min-width: 0; position: relative; z-index: 1; padding-right: 270rpx; }
+.today-card-title { margin-top: 18rpx; font-size: 50rpx; line-height: 1.25; font-weight: 800; color: #FFFFFF; }
+.today-card-meta { margin-top: 16rpx; font-size: 30rpx; color: var(--dark-text-2); }
+.today-card-meta .dot { margin: 0 10rpx; }
+.today-card-image { position: absolute; right: -10rpx; bottom: -6rpx; width: 280rpx; height: 210rpx; }
+.today-card-moon { position: absolute; right: 18rpx; bottom: 18rpx; width: 120rpx; height: 120rpx; opacity: 0.9; }
+.today-start { position: relative; margin-top: 44rpx; }
+
+.week { display: flex; gap: 10rpx; }
+.week-cell {
+  flex: 1; min-width: 0; height: 236rpx;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 18rpx 0 20rpx; border-radius: 18rpx; background: var(--surface-2);
+}
+.week-cell.is-today { background: var(--lime); }
+.week-name { font-size: 25rpx; color: var(--text-2); }
+.week-date { font-size: 24rpx; color: var(--text-3); margin-top: -18rpx; }
+.week-cell.is-today .week-name, .week-cell.is-today .week-date { color: var(--ink); font-weight: 800; }
+.week-status { width: 46rpx; height: 46rpx; border-radius: 50%; }
+.week-dot { background: var(--ink); }
+.week-ring { border: 3rpx solid #CFCDC6; }
+.week-focus { font-size: 25rpx; white-space: nowrap; color: var(--text); font-weight: 600; }
+.week-cell.is-today .week-focus { font-weight: 800; }
+
+.today-divider { margin: 44rpx 0 0; }
+.next-card { display: flex; align-items: center; gap: 28rpx; padding: 22rpx 28rpx 22rpx 20rpx; background: var(--surface); border-radius: var(--radius-lg); }
+.next-card:active { background: #FAF9F6; }
+.next-image { width: 180rpx; height: 132rpx; flex-shrink: 0; }
+.next-image.media { width: 140rpx; height: 140rpx; margin: 0 20rpx; border: 2rpx solid var(--line); }
+.next-copy { flex: 1; min-width: 0; }
+.next-name { font-size: 36rpx; font-weight: 800; color: var(--text); }
+.next-meta { margin-top: 10rpx; font-size: 30rpx; color: var(--text-2); }

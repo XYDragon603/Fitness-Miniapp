@@ -15,6 +15,43 @@ const REQUEST_TIMEOUT_MS = 25000;
 const DEVELOPMENT_MODE = process.env.NODE_ENV === 'development';
 const SOURCE_SILICONFLOW = 'siliconflow';
 const SOURCE_FALLBACK = 'fallback';
+const RECOGNIZE_PROFILES = {
+  balanced: {
+    name: 'balanced',
+    temperature: 0.08,
+    maxTokens: 820,
+    defaultImageDetail: 'low'
+  },
+  detailed: {
+    name: 'detailed',
+    temperature: 0.1,
+    maxTokens: 1100,
+    defaultImageDetail: 'high'
+  }
+};
+
+function getRecognizeProfileConfig(profileName) {
+  return RECOGNIZE_PROFILES[profileName] || RECOGNIZE_PROFILES.balanced;
+}
+
+function pickRecognizeImageInput(event = {}) {
+  const imageBase64 = event && event.imageBase64 ? String(event.imageBase64) : '';
+  const fileID = event && event.fileID ? String(event.fileID) : '';
+
+  if (imageBase64) {
+    return {
+      source: 'inline_base64',
+      imageBase64,
+      fileID: ''
+    };
+  }
+
+  return {
+    source: 'cloud_file',
+    imageBase64: '',
+    fileID
+  };
+}
 
 function round1(value) {
   return Math.round((Number(value) || 0) * 10) / 10;
@@ -143,6 +180,7 @@ function buildRequestPrompt(splitMode) {
       preferDetailed
         ? '如果看到米饭和配菜分开摆放，应尽量拆分为白米饭、虾仁或肉类、蔬菜、酱汁等独立 foods 项。'
         : '如果米饭和配菜虽然同框但边界不清，可以优先返回整体菜品估算。',
+      '如果是一盘饭或一碗饭上面覆盖肉类、鸡蛋、蔬菜或酱汁，只要主食与盖料边界能辨认，就优先拆成主食、主菜、蔬菜、酱汁等独立项。',
       '如果无法确认具体食材，请使用“疑似xx”或“配菜”“酱汁”等更稳妥的描述。',
       '重量按熟食可食部分估算，单位是克，营养信息必须是估算值。',
       '如果是火锅、麻辣烫、自助餐、拼盘、盖饭、拌饭、便当等复杂混合食物，请在 note 中提醒用户确认主要食材和份量。',
@@ -158,6 +196,7 @@ function buildRequestPrompt(splitMode) {
       preferDetailed
         ? '如果米饭、主菜、蔬菜、酱汁是分开摆放的，请尽量分别列出，不要只写一个笼统菜名。'
         : '如果菜品组合较复杂，请优先返回整体菜名，必要时再补充配菜说明。',
+      '如果是一份盖浇饭、便当、轻食盘或餐盘饭，优先判断能否拆出主食、主菜、蔬菜、酱汁四类主要组成。',
       '如果某一项看不清，请用“疑似xx”或“配菜”“酱汁”描述。',
       '如果置信度低，请在 note 中加入“识别结果可能不完整，请根据实际菜品手动调整。”',
       '请只返回 JSON。'
@@ -199,21 +238,23 @@ function extractMessageContent(message) {
   return '';
 }
 
-function requestSiliconFlow(apiKey, model, imageBase64, host, splitMode, imageDetail) {
+function requestSiliconFlow(apiKey, model, imageBase64, host, splitMode, recognizeProfile, imageDetail) {
   const prompt = buildRequestPrompt(splitMode);
-  const preferDetailed = splitMode !== 'dish_first';
+  const profile = getRecognizeProfileConfig(recognizeProfile);
+  const preferDetailed = profile.name === 'detailed';
   const compositionHint = [
     '补充规则：优先识别主要食物组成。',
     '只要主食、主菜、蔬菜、酱汁边界清楚，就分别列出，不要只返回“盖浇饭”“便当”“拼盘”这类总称。',
     '如果看到白米饭与配菜分开摆放，优先拆分为白米饭、肉类或虾仁、蔬菜、酱汁。',
+    '如果是一盘饭或一碗饭上覆盖肉类、鸡蛋、蔬菜或酱汁，只要边界可以区分，也要尽量拆成多项。',
     '如果有明显酱汁、汤汁、蘸料，请尽量单独列一项。',
     '如果无法确定具体食材，请使用“疑似xx”“配菜”“酱汁”等描述。'
   ].join(' ');
   const requestBody = JSON.stringify({
     model,
     stream: false,
-    temperature: preferDetailed ? 0.1 : 0.05,
-    max_tokens: preferDetailed ? 1100 : 700,
+    temperature: profile.temperature,
+    max_tokens: profile.maxTokens,
     messages: [
       {
         role: 'system',
@@ -231,7 +272,7 @@ function requestSiliconFlow(apiKey, model, imageBase64, host, splitMode, imageDe
             type: 'image_url',
             image_url: {
               url: `data:image/jpeg;base64,${imageBase64}`,
-              detail: imageDetail || (preferDetailed ? 'high' : 'low')
+              detail: imageDetail || profile.defaultImageDetail
             }
           },
           {
@@ -316,29 +357,12 @@ function buildFailureResponse(error, message, extras = {}) {
   };
 }
 
-function maskKeyPreview(apiKey) {
-  const value = String(apiKey || '').trim();
-  if (!value) {
-    return {
-      length: 0,
-      prefix: '',
-      suffix: ''
-    };
-  }
-
-  return {
-    length: value.length,
-    prefix: value.slice(0, 6),
-    suffix: value.slice(-4)
-  };
-}
-
-function buildDebugPayload(host, model, apiKey, imageBase64) {
+function buildDebugPayload(host, model, imageBase64, extras = {}) {
   return {
     host: host || DEFAULT_HOST,
     model: model || DEFAULT_MODEL,
-    keyPreview: maskKeyPreview(apiKey),
-    imageBase64Length: imageBase64 ? imageBase64.length : 0
+    imageBase64Length: imageBase64 ? imageBase64.length : 0,
+    ...extras
   };
 }
 
@@ -355,25 +379,35 @@ async function getImageBase64FromFileID(fileID) {
 }
 
 exports.main = async (event) => {
-  const fileID = event && event.fileID ? String(event.fileID) : '';
-  let imageBase64 = event && event.imageBase64 ? String(event.imageBase64) : '';
+  const recognizeProfile = event && event.recognizeProfile === 'detailed' ? 'detailed' : 'balanced';
+  const imageInput = pickRecognizeImageInput(event);
+  const fileID = imageInput.fileID;
+  let imageBase64 = imageInput.imageBase64;
   const apiKey = process.env.SILICONFLOW_API_KEY || '';
   const model = process.env.SILICONFLOW_MODEL || DEFAULT_MODEL;
   const host = process.env.SILICONFLOW_HOST || DEFAULT_HOST;
   const splitMode = event && event.splitMode === 'dish_first' ? 'dish_first' : 'detailed';
-  const imageDetail = event && event.imageDetail === 'high' ? 'high' : 'low';
+  const imageDetail = event && (event.imageDetail === 'high' || event.imageDetail === 'low')
+    ? event.imageDetail
+    : '';
   if (!imageBase64 && fileID) {
     try {
       imageBase64 = await getImageBase64FromFileID(fileID);
     } catch (error) {
       return buildFailureResponse('download_failed', RECOGNIZE_UNAVAILABLE_MESSAGE, {
         warning: error.message,
-        debug: buildDebugPayload(host, model, apiKey, '')
+        debug: buildDebugPayload(host, model, '', {
+          recognizeProfile,
+          inputSource: imageInput.source
+        })
       });
     }
   }
 
-  const debug = buildDebugPayload(host, model, apiKey, imageBase64);
+  const debug = buildDebugPayload(host, model, imageBase64, {
+    recognizeProfile,
+    inputSource: imageInput.source
+  });
 
   console.log('[foodRecognize] runtime config', {
     ...debug
@@ -400,7 +434,15 @@ exports.main = async (event) => {
   }
 
   try {
-    const content = await requestSiliconFlow(apiKey, model, imageBase64, host, splitMode, imageDetail);
+    const content = await requestSiliconFlow(
+      apiKey,
+      model,
+      imageBase64,
+      host,
+      splitMode,
+      recognizeProfile,
+      imageDetail
+    );
     const payload = parseJsonFromText(content);
     const normalized = normalizeResult(payload, false);
 
@@ -436,3 +478,7 @@ exports.main = async (event) => {
     });
   }
 };
+
+module.exports.getRecognizeProfileConfig = getRecognizeProfileConfig;
+module.exports.pickRecognizeImageInput = pickRecognizeImageInput;
+module.exports.main = exports.main;

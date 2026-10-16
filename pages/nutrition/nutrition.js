@@ -1,7 +1,17 @@
 const util = require('../../utils/util.js');
 const {
+  calculateFatLossTargets,
+  calculateNutritionTargets,
   createPortionAdjustedFood
 } = require('../../utils/mvp-core.js');
+const ui = require('../../utils/ui-helpers.js');
+const { buildMealGroups } = require('../../utils/records-view.js');
+const foodSuggest = require('../../utils/food-suggest.js');
+const {
+  buildRecognizeFlowPlan,
+  getRecognizeRequestStrategy,
+  shouldSuggestDetailedSplit
+} = require('../../utils/food-scan.js');
 const app = getApp();
 
 const DEFAULT_COMPRESS_OPTIONS = {
@@ -21,15 +31,78 @@ const FALLBACK_COMPRESS_OPTIONS = [
 
 const MAX_CLOUD_BASE64_LENGTH = 760000;
 
-const RECOGNIZE_UNAVAILABLE_MESSAGE = '识别暂时不可用，请稍后重试或手动添加。';
 const IMAGE_PROCESS_FAILED_MESSAGE = '图片处理失败，请重新选择图片或手动添加。';
 
 const PORTION_OPTIONS = [
-  { key: 'small', label: '小份' },
-  { key: 'standard', label: '标准份' },
-  { key: 'large', label: '大份' },
-  { key: 'custom', label: '自定义克数' }
+  { key: 'half', label: '半份' },
+  { key: 'standard', label: '一份' },
+  { key: 'custom', label: '自定义' }
 ];
+
+function macroItem(label, value, target, unit) {
+  return {
+    label,
+    value: Math.round(Number(value) || 0),
+    target: target ? Math.round(target) : 0,
+    percent: ui.percent(value, target),
+    unit: unit || 'g'
+  };
+}
+
+function buildIntakeView(dailyTotal, targets) {
+  const calories = Number(dailyTotal.calories) || 0;
+  const target = targets && targets.calories ? targets.calories : 0;
+  return {
+    calories: ui.formatThousands(calories),
+    targetText: targets && targets.caloriesText ? targets.caloriesText : '',
+    percent: ui.percent(calories, target),
+    macros: [
+      macroItem('蛋白质', dailyTotal.protein, targets && targets.protein),
+      macroItem('碳水', dailyTotal.carbs, targets && targets.carbs),
+      macroItem('脂肪', dailyTotal.fat, targets && targets.fat)
+    ]
+  };
+}
+
+function buildGoalPreview(form) {
+  const profile = {
+    height: Number(form.height),
+    weight: Number(form.weight),
+    age: Number(form.age),
+    gender: form.gender,
+    activityLevel: form.activityLevel,
+    goal: form.goal,
+    dailyCalories: Number(form.dailyCalories)
+  };
+  if (!profile.height || !profile.weight || !profile.age) return null;
+  let target = null;
+  let caloriesText = '';
+  try {
+    if (profile.goal === 'fat_loss') {
+      const fatLoss = calculateFatLossTargets(profile);
+      if (!fatLoss.isMinor) {
+        target = { dailyCalories: fatLoss.calorieRange.max, proteinTarget: fatLoss.proteinTarget, carbTarget: fatLoss.carbTarget, fatRange: fatLoss.fatRange };
+        caloriesText = `${ui.formatThousands(fatLoss.calorieRange.min)}-${ui.formatThousands(fatLoss.calorieRange.max)}`;
+      }
+    } else {
+      target = calculateNutritionTargets(profile);
+    }
+  } catch (error) {
+    target = null;
+  }
+  if (!target || !target.dailyCalories || target.isMinor) return null;
+  const calories = target.dailyCalories;
+  const fat = target.fatRange ? Math.round((target.fatRange.min + target.fatRange.max) / 2) : 0;
+  const share = (grams, kcalPerGram) => Math.round((grams * kcalPerGram / calories) * 100);
+  return {
+    calories: caloriesText || ui.formatThousands(calories),
+    macros: [
+      { label: '蛋白质', value: Math.round(target.proteinTarget), percent: share(target.proteinTarget, 4) },
+      { label: '碳水', value: Math.round(target.carbTarget), percent: share(target.carbTarget, 4) },
+      { label: '脂肪', value: fat, percent: share(fat, 9) }
+    ]
+  };
+}
 
 function createEmptyManualForm() {
   return {
@@ -48,7 +121,6 @@ const SCAN_MODE_OPTIONS = [
 ];
 
 const DEBUG_RECOGNIZE_PREFIX = '[nutrition-recognize]';
-const BROAD_DISH_KEYWORDS = ['盖浇饭', '便当', '拼盘', '套餐', '麻辣烫', '火锅', '炒饭', '拌饭', '盖饭', '沙拉碗'];
 
 function buildRecognizeUploadPath() {
   return `food-scan/${Date.now()}-${util.generateId()}.jpg`;
@@ -131,15 +203,6 @@ function inferRecognizeErrorCode(reason, debugText = '') {
   return reason || 'recognize_failed';
 }
 
-function shouldSuggestDetailedSplit(scanResult) {
-  if (!scanResult || !Array.isArray(scanResult.foods) || scanResult.foods.length !== 1) {
-    return false;
-  }
-
-  const name = String(scanResult.foods[0].name || '').trim();
-  return !!name && BROAD_DISH_KEYWORDS.some(keyword => name.indexOf(keyword) >= 0);
-}
-
 function getRecognizeErrorMessage(errorCode) {
   switch (errorCode) {
     case 'missing_image':
@@ -172,12 +235,16 @@ function buildRecognizeDebugSummary(result) {
 
   const debug = result.debug;
   const keyPreview = debug.keyPreview || {};
+  const hasKeyPreview = keyPreview.prefix || keyPreview.suffix || keyPreview.length;
   const lines = [
     `host: ${debug.host || ''}`,
     `model: ${debug.model || ''}`,
-    `key: ${keyPreview.prefix || ''}...${keyPreview.suffix || ''} (${keyPreview.length || 0})`,
     `img: ${debug.imageBase64Length || 0}`
   ];
+
+  if (hasKeyPreview) {
+    lines.splice(2, 0, `key: ${keyPreview.prefix || ''}...${keyPreview.suffix || ''} (${keyPreview.length || 0})`);
+  }
 
   if (result.error) {
     lines.push(`error: ${result.error}`);
@@ -208,6 +275,27 @@ function buildCallFunctionDebug(error) {
     'fn: foodRecognize',
     `err: ${errMsg || errorMessage || 'unknown'}`
   ].join('\n');
+}
+
+function getRecognizePhaseMeta(phase) {
+  switch (phase) {
+    case 'refining':
+      return {
+        loadingTitle: '细分中',
+        phaseText: '正在细分餐食...'
+      };
+    case 'retry_refining':
+      return {
+        loadingTitle: '重细分中',
+        phaseText: '正在重新细分餐食...'
+      };
+    case 'recognizing':
+    default:
+      return {
+        loadingTitle: '识别中',
+        phaseText: '正在识别餐食...'
+      };
+  }
 }
 
 function buildBodyTypeSummary(profile) {
@@ -260,11 +348,22 @@ Page({
       noteText: '设置每日参考热量和营养参考目标后，会在这里持续对照今天的记录。',
       hasGoal: false
     },
+    fatLossSummary: {
+      enabled: false,
+      subtitle: '点击开启健康减脂参考，查看每日参考热量区间和长期趋势。',
+      rangeText: '--',
+      proteinText: '--',
+      weeklyHabitRate: 0
+    },
     todayFoods: [],
     scanResult: null,
     scanImagePath: '',
     scanCompressedPath: '',
     showDetailedRescanHint: false,
+    recognizePhase: '',
+    recognizePhaseText: '',
+    isRecognizeRefining: false,
+    recognizeNotice: '',
     showManualForm: false,
     isEditingScanResult: false,
     editingScanFoodIndex: -1,
@@ -276,21 +375,33 @@ Page({
     scanMode: 'dish_first',
     scanModeOptions: SCAN_MODE_OPTIONS,
     activityOptions: [
-      { key: 'sedentary', label: '久坐 / 轻活动' },
-      { key: 'light', label: '轻量活动' },
+      { key: 'light', label: '轻度活动' },
       { key: 'moderate', label: '中等活动' },
-      { key: 'active', label: '较高活动' }
+      { key: 'active', label: '高强度' }
     ],
     goalOptions: [
-      { key: 'maintain', label: '保持健康记录' },
-      { key: 'muscle_gain', label: '增肌训练参考' },
-      { key: 'custom', label: '自定义目标' }
-    ]
+      { key: 'maintain', label: '保持体重' },
+      { key: 'fat_loss', label: '温和减脂' },
+      { key: 'muscle_gain', label: '增肌' },
+      { key: 'custom', label: '自定义' }
+    ],
+    intake: buildIntakeView({ calories: 0, protein: 0, fat: 0, carbs: 0 }, null),
+    mealGroups: [],
+    mealSheet: null,
+    frequentFoods: [],
+    foodSuggestions: [],
+    goalPreview: null,
+    subpageOn: true
   },
 
   onShow() {
     this.syncCustomTabBar();
     this.initPage();
+    // 从“健康减脂参考”跳过来填写基本信息
+    if (app && app.globalData && app.globalData.openGoalForm) {
+      app.globalData.openGoalForm = false;
+      this.openGoalForm();
+    }
   },
 
   syncCustomTabBar() {
@@ -304,7 +415,7 @@ Page({
     }
 
     tabBar.setData({
-      selected: 2,
+      selected: 3,
       hidden: false
     });
   },
@@ -332,6 +443,7 @@ Page({
     });
     this.loadTodayRecords();
     this.loadGoalSummary();
+    this.loadFatLossSummary();
   },
 
   loadTodayRecords() {
@@ -339,9 +451,13 @@ Page({
     const dailyTotal = util.calcDailyNutrition(foods);
     this.setData({
       todayFoods: foods,
-      dailyTotal
+      dailyTotal,
+      mealGroups: buildMealGroups(foods),
+      frequentFoods: this.loadFrequentFoods()
     }, () => {
       this.loadGoalSummary();
+      this.loadFatLossSummary();
+      this.loadIntakeView();
     });
   },
 
@@ -369,6 +485,44 @@ Page({
       return;
     }
 
+    if (profile.goal === 'fat_loss') {
+      const fatLossTarget = calculateFatLossTargets(profile);
+
+      if (fatLossTarget.isMinor) {
+        this.setData({
+          goalSummary: {
+            caloriesText: `${dailyTotal.calories} kcal`,
+            proteinText: `${dailyTotal.protein} g`,
+            fatText: `${dailyTotal.fat} g`,
+            carbsText: `${dailyTotal.carbs} g`,
+            bmiText: bodyType.bmiText,
+            bodyTypeText: bodyType.statusText,
+            bodyTypeNote: bodyType.noteText,
+            noteText: fatLossTarget.note,
+            hasGoal: true
+          },
+          goalForm: createGoalForm(profile)
+        });
+        return;
+      }
+
+      this.setData({
+        goalSummary: {
+          caloriesText: `${dailyTotal.calories} / ${fatLossTarget.calorieRange.min}-${fatLossTarget.calorieRange.max} kcal`,
+          proteinText: `${dailyTotal.protein} / ${fatLossTarget.proteinTarget} g`,
+          fatText: `${dailyTotal.fat} / ${fatLossTarget.fatRange.min}-${fatLossTarget.fatRange.max} g`,
+          carbsText: `${dailyTotal.carbs} / ${fatLossTarget.carbTarget} g`,
+          bmiText: bodyType.bmiText,
+          bodyTypeText: bodyType.statusText,
+          bodyTypeNote: bodyType.noteText,
+          noteText: '健康减脂参考 · 以每日参考热量区间和营养参考目标为主，关注长期趋势，不做强制限制。',
+          hasGoal: true
+        },
+        goalForm: createGoalForm(profile)
+      });
+      return;
+    }
+
     if (goal.isMinor) {
       this.setData({
         goalSummary: {
@@ -387,7 +541,12 @@ Page({
       return;
     }
 
-    const noteText = `${profile.goal === 'custom' ? '自定义目标' : (profile.goal === 'muscle_gain' ? '增肌训练参考' : '保持健康记录')} · 以每日参考热量和营养参考目标为主，不做强制限制。`;
+    const goalLabel = profile.goal === 'custom'
+      ? '自定义目标'
+      : (profile.goal === 'muscle_gain'
+        ? '增肌训练参考'
+        : (profile.goal === 'fat_loss' ? '健康减脂参考' : '保持健康记录'));
+    const noteText = `${goalLabel} · 以每日参考热量和营养参考目标为主，不做强制限制。`;
 
     this.setData({
       goalSummary: {
@@ -405,19 +564,141 @@ Page({
     });
   },
 
+  loadFatLossSummary() {
+    const profile = util.getFatLossProfile();
+    const summary = util.getFatLossWeeklySummary();
+
+    if (!profile) {
+      this.setData({
+        fatLossSummary: {
+          enabled: false,
+          subtitle: '点击开启健康减脂参考，查看每日参考热量区间和长期趋势。',
+          rangeText: '--',
+          proteinText: '--',
+          weeklyHabitRate: 0
+        }
+      });
+      return;
+    }
+
+    const target = calculateFatLossTargets(profile);
+
+    if (target.isMinor) {
+      this.setData({
+        fatLossSummary: {
+          enabled: true,
+          subtitle: target.note,
+          rangeText: '温和记录参考',
+          proteinText: '--',
+          weeklyHabitRate: summary.habitCompletionRate
+        }
+      });
+      return;
+    }
+
+    this.setData({
+      fatLossSummary: {
+        enabled: true,
+        subtitle: '以每日参考热量区间和长期趋势为主，不做强制限制。',
+        rangeText: `${target.calorieRange.min}-${target.calorieRange.max} kcal`,
+        proteinText: `${target.proteinTarget} g`,
+        weeklyHabitRate: summary.habitCompletionRate
+      }
+    });
+  },
+
+  getNumericTargets() {
+    const profile = util.getNutritionGoalProfile();
+    const goal = util.getNutritionGoal();
+    if (!profile || !goal) return null;
+    if (profile.goal === 'fat_loss') {
+      const target = calculateFatLossTargets(profile);
+      if (target.isMinor) return null;
+      return {
+        calories: target.calorieRange.max,
+        caloriesText: `${ui.formatThousands(target.calorieRange.min)}-${ui.formatThousands(target.calorieRange.max)} kcal`,
+        protein: target.proteinTarget,
+        carbs: target.carbTarget,
+        fat: target.fatRange.max
+      };
+    }
+    if (goal.isMinor) return null;
+    return {
+      calories: goal.dailyCalories,
+      caloriesText: `${ui.formatThousands(goal.dailyCalories)} kcal`,
+      protein: goal.proteinTarget,
+      carbs: goal.carbTarget,
+      fat: goal.fatRange ? goal.fatRange.max : 0
+    };
+  },
+
+  loadIntakeView() {
+    this.setData({ intake: buildIntakeView(this.data.dailyTotal, this.getNumericTargets()) });
+  },
+
+  refreshGoalPreview() {
+    this.setData({ goalPreview: buildGoalPreview(this.data.goalForm) });
+  },
+
+  refreshTabBarVisibility() {
+    const d = this.data;
+    this.setCustomTabBarHidden(!!(d.scanResult || d.showManualForm || d.showGoalForm || d.showEntrySheet || d.mealSheet));
+  },
+
+  // page-container 被返回手势关闭：关掉最上层，下面还有子页就重新显示
+  onSubpageLeave() {
+    const d = this.data;
+    if (!(d.scanResult || d.showManualForm || d.showGoalForm)) return;
+    if (d.showManualForm && this.isManualDirty()) {
+      this.setData({ subpageOn: false });
+      this.confirmDiscardManual(() => this.setData({ subpageOn: true }));
+      return;
+    }
+    if (d.showManualForm) this.closeManualForm();
+    else if (d.showGoalForm) this.closeGoalForm();
+    else if (d.scanResult) this.clearScanResult();
+    const still = this.data.scanResult || this.data.showManualForm || this.data.showGoalForm;
+    if (still) this.setData({ subpageOn: false }, () => this.setData({ subpageOn: true }));
+  },
+
+  openMealSheet(e) {
+    const group = this.data.mealGroups[Number(e.currentTarget.dataset.index)];
+    if (!group) return;
+    this.setData({ mealSheet: group });
+    this.refreshTabBarVisibility();
+  },
+
+  closeMealSheet() {
+    this.setData({ mealSheet: null });
+    this.refreshTabBarVisibility();
+  },
+
+  deleteMealItem(e) {
+    this.setData({ mealSheet: null });
+    this.refreshTabBarVisibility();
+    this.deleteFood(e);
+  },
+
+  openFatLossPage() {
+    wx.navigateTo({
+      url: '/pages/fatloss/fatloss'
+    });
+  },
+
   openGoalForm() {
     this.setData({
       showGoalForm: true,
       goalForm: createGoalForm(util.getNutritionGoalProfile())
     });
     this.setCustomTabBarHidden(true);
+    this.refreshGoalPreview();
   },
 
   closeGoalForm() {
     this.setData({
       showGoalForm: false
     });
-    this.setCustomTabBarHidden(false);
+    this.refreshTabBarVisibility();
   },
 
   openEntrySheet() {
@@ -431,7 +712,7 @@ Page({
     this.setData({
       showEntrySheet: false
     });
-    this.setCustomTabBarHidden(false);
+    this.refreshTabBarVisibility();
   },
 
   onGoalInput(e) {
@@ -439,24 +720,28 @@ Page({
     this.setData({
       [`goalForm.${field}`]: e.detail.value
     });
+    this.refreshGoalPreview();
   },
 
   selectGoalGender(e) {
     this.setData({
       'goalForm.gender': e.currentTarget.dataset.value
     });
+    this.refreshGoalPreview();
   },
 
   selectGoalActivity(e) {
     this.setData({
       'goalForm.activityLevel': e.currentTarget.dataset.value
     });
+    this.refreshGoalPreview();
   },
 
   selectGoalType(e) {
     this.setData({
       'goalForm.goal': e.currentTarget.dataset.value
     });
+    this.refreshGoalPreview();
   },
 
   submitGoalForm() {
@@ -488,11 +773,19 @@ Page({
     }
 
     util.saveNutritionGoalProfile(profile);
+    if (profile.goal === 'fat_loss') {
+      util.saveFatLossProfile({
+        ...profile,
+        enabled: true,
+        updatedAt: new Date().toISOString()
+      });
+    }
     this.setData({
       showGoalForm: false
     });
-    this.setCustomTabBarHidden(false);
+    this.refreshTabBarVisibility();
     this.loadGoalSummary();
+    this.loadFatLossSummary();
 
     wx.showToast({
       title: '参考目标已保存',
@@ -603,10 +896,6 @@ Page({
     });
   },
 
-  isBase64PayloadTooLarge(base64) {
-    return !!(base64 && base64.length > MAX_CLOUD_BASE64_LENGTH);
-  },
-
   uploadRecognizeImage(filePath) {
     return new Promise((resolve, reject) => {
       if (!wx.cloud || !wx.cloud.uploadFile) {
@@ -642,6 +931,10 @@ Page({
     const candidates = [primaryOptions].concat(FALLBACK_COMPRESS_OPTIONS);
     let lastBase64 = '';
     let lastCompressedPath = imagePath;
+    let lastRequestStrategy = getRecognizeRequestStrategy({
+      imageBase64Length: 0,
+      maxInlineBase64Length: MAX_CLOUD_BASE64_LENGTH
+    });
 
     for (let i = 0; i < candidates.length; i += 1) {
       const compressOptions = candidates[i];
@@ -664,21 +957,29 @@ Page({
 
       lastBase64 = imageBase64;
       lastCompressedPath = compressedPath;
+      lastRequestStrategy = getRecognizeRequestStrategy({
+        imageBase64Length: imageBase64.length,
+        maxInlineBase64Length: MAX_CLOUD_BASE64_LENGTH
+      });
 
-      if (!this.isBase64PayloadTooLarge(imageBase64)) {
+      if (!lastRequestStrategy.shouldUploadToCloud || i === 0) {
         return {
           compressedPath,
           imageBase64,
+          requestStrategy: lastRequestStrategy,
           compressOptions,
           downgraded: i > 0
         };
       }
     }
 
-    const oversizeError = new Error('image_too_large');
-    oversizeError.debugText = `img: ${lastBase64.length}`;
-    oversizeError.compressedPath = lastCompressedPath;
-    throw oversizeError;
+    return {
+      compressedPath: lastCompressedPath,
+      imageBase64: lastBase64,
+      requestStrategy: lastRequestStrategy,
+      compressOptions: candidates[candidates.length - 1],
+      downgraded: candidates.length > 1
+    };
   },
 
   callFoodRecognize(payload, options = {}) {
@@ -693,7 +994,8 @@ Page({
         data: {
           fileID: payload && payload.fileID ? payload.fileID : '',
           imageBase64: payload && payload.imageBase64 ? payload.imageBase64 : '',
-          splitMode: this.data.scanMode || 'dish_first',
+          recognizeProfile: payload && payload.recognizeProfile ? payload.recognizeProfile : 'balanced',
+          splitMode: payload && payload.splitMode ? payload.splitMode : (this.data.scanMode || 'dish_first'),
           imageDetail: options && options.preset === 'retry'
             ? 'high'
             : (this.data.scanMode === 'detailed' ? 'high' : 'low')
@@ -720,6 +1022,150 @@ Page({
           reject(failure);
         }
       });
+    });
+  },
+
+  async uploadRecognizeFallbackIfNeeded(prepared, requestStrategy, error) {
+    const isInlinePayload = !requestStrategy.shouldUploadToCloud;
+    const isPayloadLimitError = error && error.message === 'image_too_large';
+
+    if (!isInlinePayload || !isPayloadLimitError) {
+      throw error;
+    }
+
+    if (!prepared.uploadedFileId) {
+      prepared.uploadedFileId = await this.uploadRecognizeImage(prepared.compressedPath);
+    }
+
+    return prepared.uploadedFileId;
+  },
+
+  setRecognizeProgress(phase, notice = '') {
+    const meta = getRecognizePhaseMeta(phase);
+    this.setData({
+      recognizePhase: phase,
+      recognizePhaseText: meta.phaseText,
+      isRecognizeRefining: phase === 'refining' || phase === 'retry_refining',
+      recognizeNotice: notice
+    });
+    wx.showLoading({
+      title: meta.loadingTitle
+    });
+  },
+
+  applyRecognizeResult(scanResult, imagePath, compressedPath, extraState = {}) {
+    this.setData({
+      scanResult,
+      scanImagePath: imagePath,
+      scanCompressedPath: compressedPath,
+      showDetailedRescanHint: shouldSuggestDetailedSplit(scanResult),
+      showManualForm: false,
+      isEditingScanResult: false,
+      editingScanFoodIndex: -1,
+      ...extraState
+    });
+    this.refreshTabBarVisibility();
+  },
+
+  async requestRecognizePass(imagePath, prepared, options = {}, passOptions = {}) {
+    const compressedPath = prepared.compressedPath;
+    const imageBase64 = prepared.imageBase64;
+    const requestStrategy = prepared.requestStrategy || getRecognizeRequestStrategy({
+      imageBase64Length: imageBase64 ? imageBase64.length : 0,
+      maxInlineBase64Length: MAX_CLOUD_BASE64_LENGTH
+    });
+    const recognizeProfile = passOptions.recognizeProfile || 'balanced';
+    const splitMode = passOptions.splitMode || this.data.scanMode || 'dish_first';
+
+    console.log(DEBUG_RECOGNIZE_PREFIX, 'before call cloud function', {
+      imagePath,
+      compressedPath,
+      base64Length: imageBase64.length,
+      preset: options.preset || 'default',
+      recognizeProfile,
+      payloadGuard: MAX_CLOUD_BASE64_LENGTH,
+      requestMode: requestStrategy.mode,
+      shouldUploadToCloud: requestStrategy.shouldUploadToCloud,
+      uploadedFileId: prepared.uploadedFileId || ''
+    });
+
+    let result;
+
+    try {
+      result = await this.callFoodRecognize({
+        fileID: requestStrategy.shouldUploadToCloud ? (prepared.uploadedFileId || '') : '',
+        imageBase64: requestStrategy.shouldUploadToCloud ? '' : imageBase64,
+        recognizeProfile,
+        splitMode
+      }, options);
+    } catch (error) {
+      const fallbackFileId = await this.uploadRecognizeFallbackIfNeeded(prepared, requestStrategy, error);
+
+      console.warn(DEBUG_RECOGNIZE_PREFIX, 'retry with uploaded file after inline payload limit', {
+        imagePath,
+        compressedPath,
+        recognizeProfile,
+        splitMode,
+        fallbackFileId
+      });
+
+      result = await this.callFoodRecognize({
+        fileID: fallbackFileId,
+        imageBase64: '',
+        recognizeProfile,
+        splitMode
+      }, options);
+    }
+
+    const debugText = buildRecognizeDebugSummary(result);
+
+    if (!result || result.success === false) {
+      const failure = new Error(result && result.error ? result.error : 'recognize_failed');
+      failure.debugText = debugText;
+      failure.errorCode = result && result.error ? result.error : 'recognize_failed';
+      failure.warning = result && result.warning ? result.warning : '';
+      throw failure;
+    }
+
+    if (result.source === 'fallback' || result.isMock) {
+      throw new Error('mock_result');
+    }
+
+    const scanResult = normalizeScanResult({
+      ...(result.data || result),
+      source: result.source,
+      isMock: result.isMock
+    });
+
+    if (!scanResult.foods.length) {
+      throw new Error('empty_result');
+    }
+
+    return scanResult;
+  },
+
+  handleRecognizeRefineFailure(imagePath, options = {}, error, fallbackNotice) {
+    const reason = error && error.message ? error.message : 'recognize_failed';
+    const debugText = error && error.debugText
+      ? error.debugText
+      : [`reason: ${reason}`, error && error.warning ? `warning: ${error.warning}` : '', error && error.errMsg ? `err: ${error.errMsg}` : '']
+        .filter(Boolean)
+        .join('\n');
+
+    console.error(DEBUG_RECOGNIZE_PREFIX, 'refine failed', {
+      reason,
+      errorCode: error && error.errorCode ? error.errorCode : '',
+      warning: error && error.warning ? error.warning : '',
+      debugText,
+      imagePath,
+      preset: options.preset || 'default'
+    });
+
+    this.setData({
+      recognizePhase: '',
+      recognizePhaseText: '',
+      isRecognizeRefining: false,
+      recognizeNotice: fallbackNotice
     });
   },
 
@@ -799,65 +1245,101 @@ Page({
   },
 
   async runAnalyzeFood(imagePath, options = {}) {
-    wx.showLoading({
-      title: '识别中...'
-    });
-
+    const isDetailedOnly = options && options.recognizeProfile === 'detailed';
     let uploadedFileId = '';
+    let preparedRequest = null;
 
     try {
+      this.setRecognizeProgress(isDetailedOnly ? 'retry_refining' : 'recognizing');
       const prepared = await this.prepareRecognizeImage(imagePath, options);
       const compressedPath = prepared.compressedPath;
       const imageBase64 = prepared.imageBase64;
-      uploadedFileId = await this.uploadRecognizeImage(compressedPath);
-
-      console.log(DEBUG_RECOGNIZE_PREFIX, 'before call cloud function', {
-        imagePath,
-        compressedPath,
-        base64Length: imageBase64.length,
-        preset: options.preset || 'default',
-        payloadGuard: MAX_CLOUD_BASE64_LENGTH,
-        uploadedFileId
+      const requestStrategy = prepared.requestStrategy || getRecognizeRequestStrategy({
+        imageBase64Length: imageBase64 ? imageBase64.length : 0,
+        maxInlineBase64Length: MAX_CLOUD_BASE64_LENGTH
       });
 
-      const result = await this.callFoodRecognize({
-        fileID: uploadedFileId,
-        imageBase64: ''
-      }, options);
-      const debugText = buildRecognizeDebugSummary(result);
-
-      if (!result || result.success === false) {
-        const failure = new Error(result && result.error ? result.error : 'recognize_failed');
-        failure.debugText = debugText;
-        failure.errorCode = result && result.error ? result.error : 'recognize_failed';
-        failure.warning = result && result.warning ? result.warning : '';
-        throw failure;
+      if (requestStrategy.shouldUploadToCloud) {
+        uploadedFileId = await this.uploadRecognizeImage(compressedPath);
       }
 
-      if (result.source === 'fallback' || result.isMock) {
-        throw new Error('mock_result');
+      preparedRequest = {
+        ...prepared,
+        uploadedFileId,
+        requestStrategy,
+        imageBase64
+      };
+
+      if (isDetailedOnly) {
+        const detailedResult = await this.requestRecognizePass(imagePath, preparedRequest, options, {
+          recognizeProfile: 'detailed',
+          splitMode: 'detailed'
+        });
+        uploadedFileId = preparedRequest.uploadedFileId || uploadedFileId;
+        this.applyRecognizeResult(detailedResult, imagePath, compressedPath, {
+          recognizePhase: '',
+          recognizePhaseText: '',
+          isRecognizeRefining: false,
+          recognizeNotice: ''
+        });
+        return;
       }
 
-      const scanResult = normalizeScanResult({
-        ...(result.data || result),
-        source: result.source,
-        isMock: result.isMock
+      const firstPassResult = await this.requestRecognizePass(imagePath, preparedRequest, options, {
+        recognizeProfile: 'balanced',
+        splitMode: this.data.scanMode || 'dish_first'
+      });
+      uploadedFileId = preparedRequest.uploadedFileId || uploadedFileId;
+      const flowPlan = buildRecognizeFlowPlan(firstPassResult);
+
+      this.applyRecognizeResult(firstPassResult, imagePath, compressedPath, {
+        recognizePhase: flowPlan.shouldAutoRefine ? 'refining' : '',
+        recognizePhaseText: flowPlan.shouldAutoRefine ? getRecognizePhaseMeta('refining').phaseText : '',
+        isRecognizeRefining: !!flowPlan.shouldAutoRefine,
+        recognizeNotice: ''
       });
 
-      if (!scanResult.foods.length) {
-        throw new Error('empty_result');
+      if (!flowPlan.shouldAutoRefine) {
+        return;
       }
 
-      this.setData({
-        scanResult,
-        scanImagePath: imagePath,
-        scanCompressedPath: compressedPath,
-        showDetailedRescanHint: shouldSuggestDetailedSplit(scanResult),
-        showManualForm: false,
-        isEditingScanResult: false,
-        editingScanFoodIndex: -1
-      });
+      this.setRecognizeProgress('refining');
+
+      try {
+        const refinedResult = await this.requestRecognizePass(imagePath, preparedRequest, options, {
+          recognizeProfile: 'detailed',
+          splitMode: 'detailed'
+        });
+        uploadedFileId = preparedRequest.uploadedFileId || uploadedFileId;
+        this.applyRecognizeResult(refinedResult, imagePath, compressedPath, {
+          recognizePhase: '',
+          recognizePhaseText: '',
+          isRecognizeRefining: false,
+          recognizeNotice: ''
+        });
+      } catch (refineError) {
+        if (!flowPlan.preserveFirstPassOnRefineFailure) {
+          throw refineError;
+        }
+
+        this.handleRecognizeRefineFailure(
+          imagePath,
+          options,
+          refineError,
+          '首轮识别已保留，重新细分暂时失败，可稍后再试。'
+        );
+      }
     } catch (error) {
+      if (isDetailedOnly && this.data.scanResult) {
+        this.handleRecognizeRefineFailure(
+          imagePath,
+          options,
+          error,
+          '当前识别结果已保留，重新细分暂时失败，可稍后再试。'
+        );
+        return;
+      }
+
       const reason = error && error.message ? error.message : 'recognize_failed';
       const debugText = error && error.debugText
         ? error.debugText
@@ -879,87 +1361,7 @@ Page({
         this.showRecognizeUnavailable(imagePath, options, reason, debugText);
       }
     } finally {
-      this.deleteRecognizeUpload(uploadedFileId);
-      wx.hideLoading();
-    }
-  },
-
-  async analyzeFoodLegacy(imagePath, options = {}) {
-    return this.runAnalyzeFood(imagePath, options);
-    wx.showLoading({
-      title: '正在识别...'
-    });
-
-    try {
-      const compressedPath = await this.compressFoodImage(imagePath, compressOptions);
-      if (!compressedPath) {
-        throw new Error('missing_image');
-      }
-
-      const imageBase64 = await this.readFileAsBase64(compressedPath);
-      if (!imageBase64) {
-        throw new Error('empty_base64');
-      }
-
-      console.log(DEBUG_RECOGNIZE_PREFIX, 'before call cloud function', {
-        imagePath,
-        compressedPath,
-        base64Length: imageBase64.length,
-        preset: options.preset || 'default',
-        payloadGuard: MAX_CLOUD_BASE64_LENGTH
-      });
-
-      const result = await this.callFoodRecognize(imageBase64, options);
-      const debugText = buildRecognizeDebugSummary(result);
-
-      if (!result || result.success === false) {
-        const failure = new Error(result && result.error ? result.error : 'recognize_failed');
-        failure.debugText = debugText;
-        failure.errorCode = result && result.error ? result.error : 'recognize_failed';
-        failure.warning = result && result.warning ? result.warning : '';
-        throw failure;
-      }
-
-      if (result.source === 'fallback' || result.isMock) {
-        throw new Error('mock_result');
-      }
-
-      const scanResult = normalizeScanResult({
-        ...(result.data || result),
-        source: result.source,
-        isMock: result.isMock
-      });
-
-      if (!scanResult.foods.length) {
-        throw new Error('empty_result');
-      }
-
-      this.setData({
-        scanResult,
-        scanImagePath: imagePath,
-        scanCompressedPath: compressedPath,
-        showManualForm: false,
-        isEditingScanResult: false,
-        editingScanFoodIndex: -1
-      });
-    } catch (error) {
-      const reason = error && error.message ? error.message : 'recognize_failed';
-      const debugText = error && error.debugText ? error.debugText : '';
-      console.error(DEBUG_RECOGNIZE_PREFIX, 'analyze failed', {
-        reason,
-        errorCode: error && error.errorCode ? error.errorCode : '',
-        warning: error && error.warning ? error.warning : '',
-        debugText,
-        imagePath,
-        preset: options.preset || 'default'
-      });
-
-      if (error && (error.message === 'compress_failed' || error.message === 'image_too_large')) {
-        this.showImageProcessUnavailable();
-      } else {
-        this.showRecognizeUnavailable(imagePath, options, reason, debugText);
-      }
-    } finally {
+      this.deleteRecognizeUpload((preparedRequest && preparedRequest.uploadedFileId) || uploadedFileId);
       wx.hideLoading();
     }
   },
@@ -982,7 +1384,10 @@ Page({
         lowConfidence: nextFoods.some(item => item.confidence < 0.65)
       },
       showDetailedRescanHint: shouldSuggestDetailedSplit({
-        foods: nextFoods
+        ...this.data.scanResult,
+        foods: nextFoods,
+        total,
+        lowConfidence: nextFoods.some(item => item.confidence < 0.65)
       })
     });
   },
@@ -993,9 +1398,14 @@ Page({
       scanImagePath: '',
       scanCompressedPath: '',
       showDetailedRescanHint: false,
+      recognizePhase: '',
+      recognizePhaseText: '',
+      isRecognizeRefining: false,
+      recognizeNotice: '',
       isEditingScanResult: false,
       editingScanFoodIndex: -1
     });
+    this.refreshTabBarVisibility();
   },
 
   retryDetailedRecognize() {
@@ -1003,10 +1413,11 @@ Page({
       return;
     }
 
-    this.setData({
-      scanMode: 'detailed'
+    this.runAnalyzeFood(this.data.scanImagePath, {
+      preset: 'retry',
+      recognizeProfile: 'detailed',
+      splitMode: 'detailed'
     });
-    this.runAnalyzeFood(this.data.scanImagePath, { preset: 'retry' });
   },
 
   changePortion(e) {
@@ -1097,8 +1508,14 @@ Page({
       scanResult: null,
       scanImagePath: '',
       scanCompressedPath: '',
+      recognizePhase: '',
+      recognizePhaseText: '',
+      isRecognizeRefining: false,
+      recognizeNotice: '',
+      foodSuggestions: [],
       manualForm: createEmptyManualForm()
     });
+    this._manualBase = null;
     this.setCustomTabBarHidden(true);
   },
 
@@ -1145,14 +1562,99 @@ Page({
       isEditingScanResult: false,
       editingScanFoodIndex: -1
     });
-    this.setCustomTabBarHidden(false);
+    this.refreshTabBarVisibility();
+  },
+
+  // 手动填写：填了内容再返回时先确认
+  isManualDirty() {
+    const form = this.data.manualForm || {};
+    return !!this.data.showManualForm && !this.data.isEditingScanResult
+      && ['name', 'estimatedWeight', 'calories', 'protein', 'fat', 'carbs'].some(key => String(form[key] || '').trim());
+  },
+
+  confirmDiscardManual(onKeep) {
+    wx.showModal({
+      title: '放弃这条记录？',
+      content: '填写的内容还没有添加。',
+      confirmText: '放弃',
+      confirmColor: '#E06A5F',
+      cancelText: '继续填写',
+      success: result => {
+        if (result.confirm) {
+          this.closeManualForm();
+          if (this.data.scanResult) this.setData({ subpageOn: false }, () => this.setData({ subpageOn: true }));
+          else this.setData({ subpageOn: true });
+        } else if (onKeep) onKeep();
+      },
+      fail: () => { if (onKeep) onKeep(); }
+    });
+  },
+
+  requestCloseManual() {
+    if (this.isManualDirty()) this.confirmDiscardManual();
+    else this.closeManualForm();
+  },
+
+  clearManualName() {
+    this.setData({ 'manualForm.name': '' });
   },
 
   onManualInput(e) {
     const field = e.currentTarget.dataset.field;
-    this.setData({
-      [`manualForm.${field}`]: e.detail.value
+    const value = e.detail.value;
+    const update = { [`manualForm.${field}`]: value };
+    if (field === 'name') {
+      // 改了名字：之前选中的参考值失效，重新给候选
+      this._manualBase = null;
+      update.foodSuggestions = foodSuggest.suggestFoods(value, this._frequentRaw || []);
+    } else if (field === 'estimatedWeight' && this._manualBase && Number(value) > 0) {
+      // 选过候选后改重量：营养值按比例重新算
+      const filled = foodSuggest.applySuggestion(this._manualBase, Number(value));
+      ['calories', 'protein', 'fat', 'carbs'].forEach(key => { update[`manualForm.${key}`] = filled[key]; });
+    } else if (['calories', 'protein', 'fat', 'carbs'].includes(field)) {
+      // 手动改了营养值，以用户填写为准
+      this._manualBase = null;
+    }
+    this.setData(update);
+  },
+
+  // 最近 60 天里常吃的食物
+  loadFrequentFoods() {
+    const dates = util.getNutritionDates().slice().sort().reverse().slice(0, 60);
+    const recordsByDate = {};
+    dates.forEach(date => { recordsByDate[date] = util.getNutritionRecords(date); });
+    this._frequentRaw = foodSuggest.frequentFoods(recordsByDate, 8);
+    return this._frequentRaw.map(item => ({ name: item.name, calories: item.calories, weight: item.estimatedWeight }));
+  },
+
+  pickFoodSuggestion(e) {
+    const suggestion = this.data.foodSuggestions[Number(e.currentTarget.dataset.index)];
+    if (!suggestion) return;
+    this._manualBase = suggestion.per100 ? suggestion : null;
+    this.setData({ manualForm: foodSuggest.applySuggestion(suggestion), foodSuggestions: [] });
+  },
+
+  // 弹层里的“常吃的”：一键按上次的份量加到今天
+  quickAddFrequent(e) {
+    const item = (this._frequentRaw || [])[Number(e.currentTarget.dataset.index)];
+    if (!item) return;
+    const foods = util.getNutritionRecords(this.data.todayStr);
+    foods.push({
+      id: util.generateId(),
+      name: item.name,
+      estimatedWeight: item.estimatedWeight || '',
+      calories: item.calories,
+      protein: item.protein,
+      fat: item.fat,
+      carbs: item.carbs,
+      imagePath: '',
+      source: 'frequent',
+      time: new Date().toISOString()
     });
+    util.saveNutritionRecords(this.data.todayStr, foods);
+    this.closeEntrySheet();
+    this.loadTodayRecords();
+    wx.showToast({ title: `已添加${item.name}`, icon: 'success' });
   },
 
   submitManualForm() {
@@ -1206,7 +1708,7 @@ Page({
         editingScanFoodIndex: -1,
         manualForm: createEmptyManualForm()
       });
-      this.setCustomTabBarHidden(false);
+      this.refreshTabBarVisibility();
       wx.showToast({
         title: '识别结果已更新',
         icon: 'success'
@@ -1235,7 +1737,7 @@ Page({
       editingScanFoodIndex: -1,
       manualForm: createEmptyManualForm()
     });
-    this.setCustomTabBarHidden(false);
+    this.refreshTabBarVisibility();
     this.loadTodayRecords();
 
     wx.showToast({

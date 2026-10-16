@@ -1,4 +1,6 @@
 {
-  "navigationBarTitleText": "营养扫描",
+  "navigationBarTitleText": "饮食",
+  "navigationBarTextStyle": "white",
+  "backgroundColorTop": "#12191C",
   "enablePullDownRefresh": false
 }

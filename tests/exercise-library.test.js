@@ -57,7 +57,7 @@ function createPage(relativePath, fixtureIndex, wxOverrides = {}) {
       if (request.endsWith('/exercise-detail.js')) return detailMap;
       if (request.endsWith('/exercise-library.js')) return library;
       if (request.endsWith('/utils/ui-helpers.js')) return require('../utils/ui-helpers.js');
-      if (request.endsWith('/utils/exercise-favorites.js')) return require('../utils/exercise-favorites.js');
+      if (request.endsWith('/lib/exercise-favorites.js')) return require('../packageExercise/lib/exercise-favorites.js');
       if (request.endsWith('/exercise-pinyin.js')) return require('../packageExercise/data/exercise-pinyin.js');
       throw new Error(`Unexpected dependency: ${request}`);
     },

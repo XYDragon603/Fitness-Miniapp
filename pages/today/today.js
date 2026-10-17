@@ -13,7 +13,7 @@ function daysBetween(from, to) {
 
 Page({
   onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
-  onShareTimeline() { return { title: '健行计划 · 每一次都算数', query: '' }; },
+  onShareTimeline() { return { title: require('../../utils/app-sharing.js').home().title, query: '' }; },
   onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
   data: {
     dateLabel: '',

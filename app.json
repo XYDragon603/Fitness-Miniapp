@@ -21,7 +21,7 @@
   "window": {
     "backgroundTextStyle": "dark",
     "navigationBarBackgroundColor": "#F6F4EE",
-    "navigationBarTitleText": "健行计划",
+    "navigationBarTitleText": "练迹记录",
     "navigationBarTextStyle": "black",
     "navigationStyle": "custom",
     "backgroundColor": "#F6F4EE"
@@ -83,6 +83,7 @@
     }
   },
   "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
   "style": "v2",
   "usingComponents": {
     "nav-bar": "/components/nav-bar/nav-bar"

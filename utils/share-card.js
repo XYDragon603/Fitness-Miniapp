@@ -35,7 +35,7 @@ function render(canvas, report) {
   const text = (value, x, y, size, color, bold) => {
     ctx.fillStyle = color || '#F6F4EE'; ctx.font = `${bold ? 'bold ' : ''}${size}px sans-serif`; ctx.fillText(String(value), x, y);
   };
-  text('健行计划', 56, 84, 24, '#C8F76E', true);
+  text('练迹记录', 56, 84, 24, '#C8F76E', true);
   text(data.kind === 'week' ? '这一周，都算数。' : '又一次，完成。', 56, 165, 48, '', true);
   text(data.kind === 'week' ? `${data.start} — ${data.end}` : data.date, 56, 218, 24, '#A7B0B4');
   text(data.title.slice(0, 16), 56, 285, 32, '', true);

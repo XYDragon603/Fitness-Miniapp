@@ -42,6 +42,17 @@ assert.strictEqual(backup.shouldAutoBackup({ savedAt: new Date().toISOString(), 
   const oldHead = await backup.getStatus();
   assert.strictEqual(oldHead.protocol, 2);
   assert(oldHead.total > 1);
+
+  // 旧版客户端（恢复时不带 version）也能读到新格式备份
+  const legacyParts = [];
+  for (let part = 0; part < oldHead.total; part++) {
+    const piece = await cloud.service('user-a', { action: 'loadPart', part });
+    assert.strictEqual(piece.ok, true, 'legacy loadPart without version');
+    assert.strictEqual(piece.version, oldHead.version);
+    legacyParts.push(piece.data);
+  }
+  assert.strictEqual(backup.parseSnapshot(legacyParts.join('')).data.exercise_favorites[0], '0025');
+  assert.strictEqual((await cloud.service('user-b', { action: 'loadPart', part: 0 })).ok, false, 'legacy fallback stays per-account');
   assert.strictEqual((await cloud.service('user-b', { action: 'status' })).exists, false, 'accounts are isolated');
   assert.strictEqual((await cloud.service('user-b', { action: 'loadPart', version: oldHead.version, part: 0 })).ok, false);
   assert.strictEqual((await cloud.service('', { action: 'status' })).error, 'no_openid');

@@ -11,7 +11,7 @@ const BODY_PARTS = [
 
 Page({
   onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
-  onShareTimeline() { return { title: '健行计划 · 动作库', query: '' }; },
+  onShareTimeline() { return { title: '练迹记录 · 动作库', query: '' }; },
   onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
   data: { keyword: '', bodyParts: BODY_PARTS },
   onShow() {

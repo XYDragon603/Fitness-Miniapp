@@ -128,7 +128,7 @@ function dayCountLabel(plan) {
 
 Page({
   onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
-  onShareTimeline() { return { title: '健行计划 · 训练计划', query: '' }; },
+  onShareTimeline() { return { title: '练迹记录 · 训练计划', query: '' }; },
   onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
   openSchedule() { wx.navigateTo({ url: '/pages/schedule/schedule' }); },
   data: {

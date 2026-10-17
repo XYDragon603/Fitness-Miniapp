@@ -2,7 +2,7 @@ const index = require('../../data/exercise-index.js');
 const details = require('../../data/exercise-detail.js');
 const library = require('../../lib/exercise-library.js');
 const ui = require('../../../utils/ui-helpers.js');
-const favorites = require('../../../utils/exercise-favorites.js');
+const favorites = require('../../lib/exercise-favorites.js');
 
 function titleCase(text) {
   return String(text || '').replace(/\b([a-z])/g, letter => letter.toUpperCase());

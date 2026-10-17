@@ -1,7 +1,7 @@
 <nav-bar back title="{{report.kind === 'week' ? '训练周报' : '训练完成'}}" />
 <view class="page has-footer report-page">
   <view class="dark-card report-card" wx:if="{{report}}">
-    <view class="brand">健行计划</view><view class="report-title">{{report.kind === 'week' ? '这一周，都算数。' : '又一次，完成。'}}</view>
+    <view class="brand">练迹记录</view><view class="report-title">{{report.kind === 'week' ? '这一周，都算数。' : '又一次，完成。'}}</view>
     <view class="report-date">{{report.kind === 'week' ? report.start + ' — ' + report.end : report.date}}</view><view class="report-name">{{report.title}}</view>
     <view class="volume-panel"><view class="label-dark">训练量</view><view class="report-volume num">{{report.volume}}<text> kg</text></view></view>
     <view class="report-grid"><view><text class="label-dark">{{report.kind === 'week' ? '训练' : '完成动作'}}</text><view class="report-value num">{{report.kind === 'week' ? report.trainingCount + ' 次' : report.exerciseCount + ' 个'}}</view></view><view><text class="label-dark">新纪录</text><view class="report-value num">{{report.prCount}} 项</view></view><view><text class="label-dark">{{report.kind === 'week' ? '平均摄入' : '完成组数'}}</text><view class="report-value num">{{report.kind === 'week' ? (report.avgCalories === null ? '未记录' : report.avgCalories + ' kcal') : report.setCount + ' 组'}}</view></view><view><text class="label-dark">{{report.kind === 'week' ? '体重变化' : '训练时长'}}</text><view class="report-value num">{{report.kind === 'week' ? (report.weightChange === null ? '记录不足' : report.weightChange + ' kg') : (report.durationMin ? report.durationMin + ' 分钟' : '未计时')}}</view></view></view>

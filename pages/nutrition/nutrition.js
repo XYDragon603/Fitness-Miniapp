@@ -329,7 +329,7 @@ function buildBodyTypeSummary(profile) {
 
 Page({
   onShareAppMessage() { return require('../../utils/app-sharing.js').home(); },
-  onShareTimeline() { return { title: '健行计划 · 饮食记录', query: '' }; },
+  onShareTimeline() { return { title: '练迹记录 · 饮食记录', query: '' }; },
   onAddToFavorites() { return require('../../utils/app-sharing.js').favorite(); },
   data: {
     todayCN: '',

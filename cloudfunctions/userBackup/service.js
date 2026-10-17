@@ -41,10 +41,19 @@ function createService(db) {
     if (action === 'loadPart') {
       const part = Number(event.part);
       if (!Number.isInteger(part) || part < 0 || part >= MAX_PARTS) return { ok: false, error: 'bad_part' };
-      const upload = version ? await read(id(openid, version + '_upload')) : null;
-      if (version && (!upload || upload.status !== 'committed' || part >= upload.total)) return { ok: false, error: 'not_found' };
-      const piece = await read(id(openid, version ? version + '_' + part : String(part)));
-      return piece ? { ok: true, version, part: piece.part, total: piece.total, data: piece.data, savedAt: piece.savedAt } : { ok: false, error: 'not_found' };
+      // 旧版客户端恢复时不带 version：先找旧格式分片，找不到就用当前 manifest 指向的版本
+      let pinned = version;
+      if (!pinned) {
+        const legacy = await read(id(openid, String(part)));
+        if (legacy) return { ok: true, version: '', part: legacy.part, total: legacy.total, data: legacy.data, savedAt: legacy.savedAt };
+        const manifest = await read(id(openid, 'manifest'));
+        if (!manifest || !manifest.version) return { ok: false, error: 'not_found' };
+        pinned = manifest.version;
+      }
+      const upload = await read(id(openid, pinned + '_upload'));
+      if (!upload || upload.status !== 'committed' || part >= upload.total) return { ok: false, error: 'not_found' };
+      const piece = await read(id(openid, pinned + '_' + part));
+      return piece ? { ok: true, version: pinned, part: piece.part, total: piece.total, data: piece.data, savedAt: piece.savedAt } : { ok: false, error: 'not_found' };
     }
     if (!['savePart', 'commit'].includes(action)) return { ok: false, error: 'unknown_action' };
     if (!version) return { ok: false, error: 'client_update_required' };
